@@ -16,6 +16,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-venv \
     mate-desktop-environment-core \
     tightvncserver \
+    curl \
+    wget \
+    nano \
+    net-tools \
+    git \
+    sudo \
+    htop \
     && pip3 install nltk torch torchvision torchaudio \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
@@ -36,6 +43,7 @@ COPY . .
 
 # Non-root User:
 RUN useradd -m dlrp && chown -R dlrp:dlrp /gencore-workdir
+RUN echo 'dlrp ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
 USER dlrp
 
 # Set up VNC server
@@ -57,7 +65,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 CMD ["vncserver", "-geometry", "1280x800", "-depth", "24", "-localhost", "no", ":1"]
 
 # Function to ensure the script is running with administrative privileges
-RUN echo '
+RUN echo '#!/bin/bash
 ensureAdmin() {
     if [[ $EUID -ne 0 ]]; then
         echo "Please run this script as root or with sudo."
@@ -68,7 +76,7 @@ ensureAdmin() {
 # Check the last command and exit if it failed
 checkError() {
     if [[ $? -ne 0 ]]; then
-        echo "Error: $1 failed with error code $?."
+        echo "Error: $1 failed with error code $?"
         logError "$1"
         exit 1
     fi
@@ -76,7 +84,7 @@ checkError() {
 
 # Log errors
 logError() {
-    echo "$(date) - Error: $1 failed with error code $?" >> error_log.txt
+    echo "$(date) - Error: $1 failed with error code $?" >> /gencore-workdir/error_log.txt
 }
 
 # Perform initial system checks
@@ -89,6 +97,9 @@ systemCheck() {
     # Check for available disk space
     FreeSpace=$(df / | tail -1 | awk "{print $4}")
     echo "Free space on /: ${FreeSpace}K"
+    if [[ $FreeSpace -lt 1048576 ]]; then
+        echo "Warning: Less than 1GB of free space available."
+    fi
 
     # Check for internet connectivity
     ping -c 1 google.com > /dev/null 2>&1
@@ -106,28 +117,28 @@ systemCheck() {
 # Update system files and health
 updateSystem() {
     echo "Updating system..."
-    apt-get update && apt-get upgrade -y
+    sudo apt-get update && sudo apt-get upgrade -y
     checkError "System Update"
 }
 
 # Install common tools
 installCommonTools() {
     echo "Installing common tools..."
-    apt-get install -y git nodejs
+    sudo apt-get install -y git nodejs net-tools htop
     checkError "Common Tools Installation"
 }
 
 # Install additional tools
 installAdditionalTools() {
     echo "Installing additional tools..."
-    apt-get install -y python3 python3-venv docker.io
+    sudo apt-get install -y python3 python3-venv docker.io docker-compose
     checkError "Additional Tools Installation"
 }
 
 # Install optional tools
 installOptionalTools() {
     echo "Installing optional tools..."
-    apt-get install -y postman slack zoom wget curl terraform kubectl minikube awscli azure-cli
+    sudo apt-get install -y postman slack zoom wget curl terraform kubectl minikube awscli azure-cli
     checkError "Optional Tools Installation"
 }
 
@@ -148,6 +159,8 @@ setupPythonEnv() {
     checkError "Python Virtual Environment Setup"
     source venv/bin/activate
     checkError "Activate Python Virtual Environment"
+    pip install --upgrade pip
+    checkError "Pip Upgrade"
     pip install -r requirements.txt
     checkError "Install Python Requirements"
 }
@@ -234,14 +247,13 @@ start_system() {
 # Set up HostOS
 setup_hostos() {
     echo "Setting up HostOS..."
-    apt-get install -y htop
+    sudo apt-get install -y htop
     checkError "Install htop"
 }
 
 # Set up SubOS
 setup_subos() {
     echo "Setting up SubOS..."
-    # Add commands to set up SubOS here
     echo "SubOS setup is a placeholder."
     checkError "Setup SubOS"
 }
@@ -249,7 +261,6 @@ setup_subos() {
 # Set up NanoOS
 setup_nanoos() {
     echo "Setting up NanoOS..."
-    # Add commands to set up NanoOS here
     echo "NanoOS setup is a placeholder."
     checkError "Setup NanoOS"
 }
@@ -293,7 +304,7 @@ restore_config() {
 check_dependencies() {
     echo "Checking and Installing Dependencies..."
     if ! command -v terraform &> /dev/null; then
-        apt-get install -y terraform
+        sudo apt-get install -y terraform
         checkError "Install Terraform"
     fi
 }
@@ -302,7 +313,7 @@ check_dependencies() {
 launch_terminal() {
     echo "Launching Terminal..."
     ensureAdmin
-    open -a Terminal .
+    x-terminal-emulator &
     checkError "Launch Terminal"
 }
 ' > /usr/local/bin/gencore_setup.sh
