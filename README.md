@@ -1,4 +1,5 @@
 🐒 Monkey Head Project
+![Spark-4](https://github.com/user-attachments/assets/8a1342ff-94a1-4b1f-83f0-d16ef2b7f7ce)
 
 🤖 AI/OS (Artificial Intelligence Operating System)
 
