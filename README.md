@@ -260,7 +260,6 @@ Usage: Central platform for code development, AI algorithm testing, system integ
 ### Legacy Systems (C64, VIC-20, C128)
 
 - **Role in Development**: Employed for **interfacing experiments** and showcasing adaptability to historical hardware. These legacy systems serve as proof-of-concept platforms, demonstrating how modern AI algorithms can adapt to and optimize older hardware. This versatility underscores the project’s commitment to 'breathing new life into old tech.' These systems help to test integration scenarios, ensuring backward compatibility and fostering a diverse, hybrid environment where modern and legacy technologies coalesce effectively.
-![Volt-4](https://github.com/user-attachments/assets/a97a4579-f0ea-45f7-868b-ca85b213deab)
 
 ## Acknowledgements
 
