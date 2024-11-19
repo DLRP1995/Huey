@@ -125,6 +125,7 @@
     "editor.overviewRulerLanes": 3,
     "editor.find.autoFindInSelection": true,
     "editor.find.seedSearchStringFromSelection": true,
-    "editor.smoothScrolling": true
+    "editor.bracketPairColorization.enabled": true,
+    "editor.guides.highlightActiveBracketPair": true
   }
 }
