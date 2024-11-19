@@ -46,6 +46,11 @@ We welcome various types of contributions, including coding, documentation impro
 2. Navigate to the original repository and click on "New Pull Request".
 3. Fill out the pull request template with details about your changes and submit.
 
+### Reviewing and Merging
+- Once you submit a pull request, it will be reviewed by one of the maintainers.
+- Please be responsive to any feedback or requested changes.
+- Once approved, the changes will be merged into the main repository.
+
 ## Setting Up the Development Environment
 To set up your development environment, follow these steps:
 
@@ -70,6 +75,12 @@ To set up your development environment, follow these steps:
      docker run -p 8000:8000 monkey-head-project
      ```
 
+4. **Run Tests:**
+   - To verify your setup, run the tests:
+     ```bash
+     pytest tests/
+     ```
+
 ## Contribution Guidelines
 To maintain the quality and consistency of the project, please adhere to the following guidelines:
 
@@ -81,16 +92,22 @@ To maintain the quality and consistency of the project, please adhere to the fol
 - **Commit Messages:**
   - Write clear, concise, and descriptive commit messages.
   - Use imperative mood in the subject line (e.g., "Add feature" instead of "Added feature").
+  - Use tags for categorization, e.g., `[Fix]`, `[Feature]`, `[Docs]` to make it clear what your commit covers.
 
 - **Testing:**
   - Ensure your code has accompanying tests.
   - Run existing tests to verify that your changes do not break any functionality.
   - For hardware-related code contributions, make sure to follow lab testing protocols and provide benchmark results.
+  - Use unit tests for isolated functions, and integration tests for interactions between systems.
 
 - **Documentation:**
   - Update documentation as necessary to reflect your changes.
   - Ensure that new features or changes are documented in the relevant sections.
   - The core focus of the documentation is to 'breathe new life into old tech,' so make sure all contributions align with this ethos.
+
+- **Code Reviews:**
+  - Review open pull requests and provide constructive feedback.
+  - Follow the project's etiquette for code reviews, focusing on readability, maintainability, and scalability.
 
 ## Reporting Bugs or Issues
 If you encounter a bug or have a feature request, please use the [GitHub issue tracker](link_to_issue_tracker) to report it. When reporting issues, please include:
@@ -100,13 +117,15 @@ If you encounter a bug or have a feature request, please use the [GitHub issue t
 - Expected and actual results.
 - Any relevant logs, screenshots, or error messages.
 - For hardware-specific issues, provide system specs and setup details (e.g., CPU, RAM, disk space, etc.).
+- Provide any workaround steps you may have found to help in diagnosing the problem.
 
 ## Community and Communication
 Join our community to stay updated and engage with other contributors:
 
 - **Community Forum:** Participate in discussions, ask questions, and share ideas at our [Community Forum](link_to_forum).
-- **Virtual Meetups:** We hold regular virtual meetups every [time frame]. Details are posted on the community forum.
+- **Virtual Meetups:** We hold regular virtual meetups every month. Details are posted on the community forum.
 - **Monthly Updates:** Project updates will be provided monthly, detailing the latest features, issues, and future roadmap.
+- **Instant Messaging:** Join our chat channel at [link_to_chat] for real-time collaboration with the community.
 
 ## Acknowledgments
 Your contributions make the Monkey Head Project better. Thank you for your time, effort, and expertise. We appreciate every contributor's effort, no matter how big or small.
@@ -114,6 +133,9 @@ Your contributions make the Monkey Head Project better. Thank you for your time,
 ## Contact
 If you have any questions or suggestions, feel free to reach out to us at admin@dlrp.ca. We are here to help and support you in your contribution journey.
 
+### Emergencies and Critical Issues
+- For critical issues that need immediate attention, please add `[Critical]` to your issue title, and send an email to `admin@dlrp.ca` with the issue link.
+
 By following these guidelines, you help us maintain the high standards of the Monkey Head Project and ensure that it remains a valuable resource for everyone. Happy coding!
 
-(NOTE: This content has been written or altered by an AI agent & is pending approval from a human counterpart.)
+*(NOTE: This content has been written or altered by an AI agent & is pending approval from a human counterpart.)*
