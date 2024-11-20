@@ -1,2 +1,0 @@
-* `openpassword`
-* `permissionpassword`

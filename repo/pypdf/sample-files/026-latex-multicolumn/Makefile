@@ -1,2 +1,0 @@
-make:
-	pdflatex multicolumn.tex

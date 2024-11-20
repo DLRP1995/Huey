@@ -1,0 +1,25 @@
+{
+  "name": "webui",
+  "description": "qBittorrent WebUI",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/qbittorrent/qBittorrent.git"
+  },
+  "scripts": {
+    "format": "js-beautify -r *.mjs private/*.html private/scripts/*.js private/views/*.html public/*.html public/scripts/*.js && prettier --write **.css",
+    "lint": "eslint *.mjs private/*.html private/scripts/*.js private/views/*.html public/*.html public/scripts/*.js && stylelint **/*.css && html-validate private public"
+  },
+  "devDependencies": {
+    "@stylistic/eslint-plugin": "*",
+    "eslint": "*",
+    "eslint-plugin-html": "*",
+    "eslint-plugin-prefer-arrow-functions": "*",
+    "eslint-plugin-regexp": "*",
+    "html-validate": "*",
+    "js-beautify": "*",
+    "prettier": "*",
+    "stylelint": "*",
+    "stylelint-config-standard": "*",
+    "stylelint-order": "*"
+  }
+}

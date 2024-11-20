@@ -1,0 +1,49 @@
+#pragma code_page(65001) // UTF-8
+
+IDI_ICON1 ICON "icons\qbittorrent.ico"
+IDI_ICON2 ICON "icons\qbittorrent_file.ico"
+
+#include <windows.h>
+#include "base/version.h"
+
+#define VER_FILEVERSION             QBT_VERSION_MAJOR,QBT_VERSION_MINOR,QBT_VERSION_BUGFIX,QBT_VERSION_BUILD
+#define VER_FILEVERSION_STR         QBT_VERSION
+
+#define VER_PRODUCTVERSION          QBT_VERSION_MAJOR,QBT_VERSION_MINOR,QBT_VERSION_BUGFIX,QBT_VERSION_BUILD
+#define VER_PRODUCTVERSION_STR      QBT_VERSION
+
+#ifndef DEBUG
+#define VER_DEBUG                   0
+#else
+#define VER_DEBUG                   VS_FF_DEBUG
+#endif
+
+1 VERSIONINFO
+FILEVERSION    	VER_FILEVERSION
+PRODUCTVERSION 	VER_PRODUCTVERSION
+FILEFLAGSMASK  	VER_DEBUG
+FILEFLAGS      	VER_DEBUG
+FILEOS         	VOS__WINDOWS32
+FILETYPE       	VFT_APP
+FILESUBTYPE    	VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName",      "The qBittorrent Project"
+            VALUE "FileDescription",  "qBittorrent - A Bittorrent Client"
+            VALUE "FileVersion",      VER_FILEVERSION_STR
+            VALUE "InternalName",     "qbittorrent"
+            VALUE "LegalCopyright",   "Copyright ©2006-2024 The qBittorrent Project"
+            VALUE "OriginalFilename", "qbittorrent.exe"
+            VALUE "ProductName",      "qBittorrent"
+            VALUE "ProductVersion",   VER_PRODUCTVERSION_STR
+        END
+    END
+
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
