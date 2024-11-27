@@ -6,9 +6,12 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.05.01 03:00:00                  #
+# Updated Date: 2024.11.23 00:00:00                  #
 # ================================================== #
 
+from pygpt_net.core.types import (
+    MODE_COMPLETION,
+)
 from pygpt_net.item.model import ModelItem
 
 
@@ -54,7 +57,7 @@ class Completion:
                         self.window,
                         model,
                         "langchain",
-                        "completion",
+                        MODE_COMPLETION,
                     )
                     # get LLM provider instance
                     llm = self.window.core.llm.llms[provider].completion(
@@ -132,15 +135,15 @@ class Completion:
                         and item.output_name is not None \
                         and item.input_name != "" \
                         and item.output_name != "":
-                    if item.input is not None and item.input != "":
-                        message += "\n" + item.input_name + ": " + item.input
-                    if item.output is not None and item.output != "":
-                        message += "\n" + item.output_name + ": " + item.output
+                    if item.final_input is not None and item.final_input != "":
+                        message += "\n" + item.input_name + ": " + item.final_input
+                    if item.final_output is not None and item.final_output != "":
+                        message += "\n" + item.output_name + ": " + item.final_output
                 else:
-                    if item.input is not None and item.input != "":
-                        message += "\n" + item.input
-                    if item.output is not None and item.output != "":
-                        message += "\n" + item.output
+                    if item.final_input is not None and item.final_input != "":
+                        message += "\n" + item.final_input
+                    if item.final_output is not None and item.final_output != "":
+                        message += "\n" + item.final_output
 
         # append names
         if user_name is not None \

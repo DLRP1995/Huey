@@ -6,7 +6,7 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.20 03:00:00                  #
+# Updated Date: 2024.11.20 21:00:00                  #
 # ================================================== #
 
 import json
@@ -57,8 +57,8 @@ class Voice:
             ControlEvent.CTX_SEARCH_CLEAR: "Clear the search results",
             ControlEvent.INPUT_SEND: "Send the message to input",
             ControlEvent.INPUT_APPEND: "Append message to current input without sending it",
-            ControlEvent.MODE_CHAT: "Switch to chat mode",
-            ControlEvent.MODE_LLAMA_INDEX: "Switch to chat with files (llama-index) mode",
+            ControlEvent.MODE_CHAT: "Switch to Chat mode",
+            ControlEvent.MODE_LLAMA_INDEX: "Switch to Chat with Files (LlamaIndex) mode",
             ControlEvent.MODE_NEXT: "Switch to the next mode",
             ControlEvent.MODE_PREV: "Switch to the previous mode",
             ControlEvent.MODEL_NEXT: "Switch to the next model",
@@ -229,7 +229,7 @@ class Voice:
             'context': bridge_context,
             'extra': {},
         })
-        self.window.core.dispatcher.dispatch(event)
+        self.window.dispatch(event)
         response = event.data.get('response')
         if response is None or response == "":
             return []

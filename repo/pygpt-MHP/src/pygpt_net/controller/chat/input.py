@@ -6,11 +6,18 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.20 03:00:00                  #
+# Updated Date: 2024.11.26 19:00:00                  #
 # ================================================== #
 
 from pygpt_net.core.bridge import BridgeContext
+from pygpt_net.core.bridge.context import MultimodalContext
 from pygpt_net.core.events import Event, AppEvent, KernelEvent, RenderEvent
+from pygpt_net.core.types import (
+    MODE_AGENT,
+    MODE_AGENT_LLAMA,
+    MODE_ASSISTANT,
+    MODE_IMAGE,
+)
 from pygpt_net.item.ctx import CtxItem
 from pygpt_net.utils import trans
 
@@ -26,19 +33,16 @@ class Input:
         self.locked = False
         self.stop = False
         self.generating = False
-        self.no_api_key_allowed = [
-            "langchain",
-            "llama_index",
-            "agent",
-            "agent_llama",
-            "expert",
-        ]
         self.no_ctx_idx_modes = [
-            # "img",
-            "assistant",
-            # "llama_index",
-            "agent",
+            # MODE_IMAGE,
+            MODE_ASSISTANT,
+            # MODE_LLAMA_INDEX,
+            MODE_AGENT,
         ]  # assistant is handled in async, agent is handled in agent flow
+        self.stop_commands = [
+            "stop",
+            "halt",
+        ]
 
     def send_input(self, force: bool = False):
         """
@@ -48,52 +52,62 @@ class Input:
         """
         self.window.controller.agent.experts.unlock()  # unlock experts
         self.window.controller.agent.llama.reset_eval_step()  # reset evaluation steps
-        if not force:
-            self.window.core.dispatcher.dispatch(AppEvent(AppEvent.INPUT_SENT))  # app event
-
-        # check if not in edit mode
-        if not force and self.window.controller.ctx.extra.is_editing():
-            self.window.controller.ctx.extra.edit_submit()
-            return
 
         # get text from input
         text = self.window.ui.nodes['input'].toPlainText().strip()
         mode = self.window.core.config.get('mode')
 
-        # if agent mode: iterations check
         if not force:
-            if (mode == "agent" and self.window.core.config.get('agent.iterations') == 0) \
-                    or (self.window.controller.plugins.is_enabled("agent")
-                        and self.window.core.plugins.get_option("agent", "iterations") == 0):
+            self.window.dispatch(AppEvent(AppEvent.INPUT_SENT))  # app event
 
-                # show alert confirm
-                self.window.ui.dialogs.confirm(
-                    type="agent.infinity.run",
-                    id=0,
-                    msg=trans("agent.infinity.confirm.content"),
-                )
+            # check if not in edit mode
+            if self.window.controller.ctx.extra.is_editing():
+                self.window.controller.ctx.extra.edit_submit()
                 return
 
+            # if agent mode: iterations check, show alert confirm if infinity loop
+            if self.window.controller.agent.common.is_infinity_loop(mode):
+                self.window.controller.agent.common.display_infinity_loop_confirm()
+                return
+
+        # listen for stop command
         if self.generating \
                 and text is not None \
-                and text.lower().strip() in ["stop", "halt"]:
+                and text.lower().strip() in self.stop_commands:
             self.window.controller.kernel.stop()  # TODO: to chat main
-            event = RenderEvent(RenderEvent.CLEAR_INPUT)
-            self.window.core.dispatcher.dispatch(event)
+            self.window.dispatch(RenderEvent(RenderEvent.CLEAR_INPUT))
             return
 
         # agent modes
-        if mode == 'agent':
-            self.window.controller.agent.flow.on_user_send(text)  # begin legacy agent flow
-        elif mode == "agent_llama":
-            self.window.controller.agent.llama.flow_begin()  # begin llama agent flow
+        if mode == MODE_AGENT:
+            self.window.controller.agent.legacy.on_user_send(text)  # begin legacy agent flow
+        elif mode == MODE_AGENT_LLAMA:
+            self.window.controller.agent.llama.on_user_send(text)  # begin llama agent flow
 
         # event: user input send (manually)
         event = Event(Event.USER_SEND, {
             'value': text,
         })
-        self.window.core.dispatcher.dispatch(event)
+        self.window.dispatch(Event(Event.USER_SEND, {
+            'value': text,
+        }))
         text = event.data['value']
+
+        # handle attachments with additional context (not images here)
+        if mode != MODE_ASSISTANT and self.window.controller.chat.attachment.has(mode):
+            self.window.dispatch(KernelEvent(KernelEvent.STATE_BUSY, {
+                "id": "chat",
+                "msg": "Reading attachments..."
+            }))
+            try:
+                self.window.controller.chat.attachment.handle(mode, text)
+                return  # return here, will be handled in signal
+            except Exception as e:
+                self.window.dispatch(KernelEvent(KernelEvent.STATE_ERROR, {
+                    "id": "chat",
+                    "msg": "Error reading attachments: {}".format(str(e))
+                }))
+                return
 
         # event: handle input
         context = BridgeContext()
@@ -102,7 +116,7 @@ class Input:
             'context': context,
             'extra': {},
         })
-        self.window.core.dispatcher.dispatch(event)
+        self.window.dispatch(event)
 
     def send(
             self,
@@ -121,6 +135,7 @@ class Input:
         reply = extra.get("reply", False)
         internal = extra.get("internal", False)
         parent_id = extra.get("parent_id", None)
+        multimodal_ctx = context.multimodal_ctx
         self.execute(
             text=text,
             force=force,
@@ -128,6 +143,7 @@ class Input:
             internal=internal,
             prev_ctx=prev_ctx,
             parent_id=parent_id,
+            multimodal_ctx=multimodal_ctx,
         )
 
     def execute(
@@ -138,6 +154,7 @@ class Input:
             internal: bool = False,
             prev_ctx: CtxItem = None,
             parent_id: int = None,
+            multimodal_ctx: MultimodalContext = None,
     ):
         """
         Execute send input text to API
@@ -148,8 +165,11 @@ class Input:
         :param internal: internal call
         :param prev_ctx: previous context (if reply)
         :param parent_id: parent id (if expert)
+        :param multimodal_ctx: multimodal context
         """
-        self.window.stateChanged.emit(self.window.STATE_IDLE)
+        self.window.dispatch(KernelEvent(KernelEvent.STATE_IDLE, {
+            "id": "chat",
+        }))
 
         # check if input is not locked
         if self.locked and not force and not internal:
@@ -159,72 +179,64 @@ class Input:
         self.generating = True  # set generating flag
 
         mode = self.window.core.config.get('mode')
-        if mode == 'assistant':
+        if mode == MODE_ASSISTANT:
             # check if assistant is selected
             if self.window.core.config.get('assistant') is None \
                     or self.window.core.config.get('assistant') == "":
                 self.window.ui.dialogs.alert(trans('error.assistant_not_selected'))
                 self.generating = False  # unlock
                 return
-        elif (mode == 'vision'
-              or self.window.controller.plugins.is_type_enabled('vision')
-              or self.window.controller.ui.vision.is_vision_model()):
-            # capture frame from camera if auto-capture enabled
-            if self.window.controller.camera.is_enabled():
-                if self.window.controller.camera.is_auto():
-                    self.window.controller.camera.capture_frame(False)
-                    self.log("Captured frame from camera.")  # log
+        elif self.window.controller.ui.vision.has_vision():
+            # handle auto capture
+            self.window.controller.camera.handle_auto_capture()
 
-        # check if attachment exists, make this here to prevent clearing list on async reply!
-        has_attachments = self.window.controller.attachment.has(mode)
-
-        # unlock Assistant run thread if locked
+        # unlock Assistants run thread if locked
         self.window.controller.assistant.threads.stop = False
-        self.window.controller.kernel.halt = False
+        self.window.controller.kernel.resume()
 
         self.log("Input prompt: {}".format(text))  # log
 
         # agent mode
-        if mode == 'agent':
+        if mode == MODE_AGENT:
             self.log("Agent: input before: {}".format(text))
-            text = self.window.controller.agent.flow.on_input_before(text)
+            text = self.window.controller.agent.legacy.on_input_before(text)
 
         # event: before input
         event = Event(Event.INPUT_BEFORE, {
             'value': text,
             'mode': mode,
         })
-        self.window.core.dispatcher.dispatch(event)
+        self.window.dispatch(event)
         text = event.data['value']
 
-        # check if image captured from camera
-        camera_captured = (
-                (
-                        mode == 'vision'
-                        or self.window.controller.plugins.is_type_enabled('vision')
-                        or self.window.controller.ui.vision.is_vision_model()
-                )
-                and self.window.controller.attachment.has(mode)  # check if attachment exists
-        )
+        # check if image captured from camera, # check if attachment exists
+        camera_captured = (self.window.controller.ui.vision.has_vision()
+                           and self.window.controller.attachment.has(mode))
 
-        # allow empty input only for vision modes, otherwise abort
-        if len(text.strip()) == 0 and not camera_captured:
+        # allow empty text input only if multimodal data, otherwise abort
+        is_audio = multimodal_ctx is not None and multimodal_ctx.is_audio_input
+        if len(text.strip()) == 0 and (not camera_captured and not is_audio):
             self.generating = False  # unlock as not generating
             return
 
-        # check API key, show monit if not set
-        if mode not in self.no_api_key_allowed:
+        # check API key, show monit if no API key
+        if mode not in self.window.controller.launcher.no_api_key_allowed:
             if not self.window.controller.chat.common.check_api_key():
                 self.generating = False
-                self.window.stateChanged.emit(self.window.STATE_ERROR)
+                self.window.dispatch(KernelEvent(KernelEvent.STATE_ERROR, {
+                    "id": "chat",
+                }))
                 return
 
-        self.window.ui.status(trans('status.sending'))
+        # set state to: busy
+        self.window.dispatch(KernelEvent(KernelEvent.STATE_BUSY, {
+            "id": "chat",
+            "msg": trans('status.sending'),
+        }))
 
         # clear input field if clear-on-send is enabled
         if self.window.core.config.get('send_clear') and not force and not internal:
-            event = RenderEvent(RenderEvent.CLEAR_INPUT)
-            self.window.core.dispatcher.dispatch(event)
+            self.window.dispatch(RenderEvent(RenderEvent.CLEAR_INPUT))
 
         # prepare ctx, create new ctx meta if there is no ctx, or no ctx selected
         if self.window.core.ctx.count_meta() == 0 or self.window.core.ctx.get_current() is None:
@@ -232,11 +244,11 @@ class Input:
             self.window.controller.ctx.update()
             self.log("New context created...")  # log
         else:
-            # check if current ctx is allowed for this mode - if not, then create new ctx
+            # check if current ctx is allowed for this mode - if not, then auto-create new ctx
             self.window.controller.ctx.handle_allowed(mode)
 
-        # send input to API, return ctx
-        if mode == 'img':
+        # send input to API
+        if mode == MODE_IMAGE:
             self.window.controller.chat.image.send(
                 text=text,
                 prev_ctx=prev_ctx,
@@ -250,6 +262,7 @@ class Input:
                 internal=internal,
                 prev_ctx=prev_ctx,
                 parent_id=parent_id,
+                multimodal_ctx=multimodal_ctx,
             )  # text mode: OpenAI, Langchain, Llama, etc.
 
     def log(self, data: any):

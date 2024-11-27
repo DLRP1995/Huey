@@ -69,7 +69,7 @@ class Assistants:
 
         header.addWidget(self.window.ui.nodes['assistants.new'], alignment=Qt.AlignRight)
         header.addWidget(self.window.ui.nodes['assistants.import'], alignment=Qt.AlignRight)
-        header.setContentsMargins(0, 0, 0, 0)
+        header.setContentsMargins(5, 0, 0, 0)
         header_widget = QWidget()
         header_widget.setLayout(header)
 
@@ -79,12 +79,14 @@ class Assistants:
         self.window.ui.nodes[self.id].setMinimumWidth(40)
 
         self.window.ui.nodes['tip.toolbox.assistants'] = HelpLabel(trans('tip.toolbox.assistants'), self.window)
+        self.window.ui.nodes['tip.toolbox.assistants'].setAlignment(Qt.AlignCenter)
 
         # rows
         layout = QVBoxLayout()
         layout.addWidget(header_widget)
         layout.addWidget(self.window.ui.nodes[self.id])
         layout.addWidget(self.window.ui.nodes['tip.toolbox.assistants'])
+        layout.setContentsMargins(2, 5, 5, 5)
 
         # model
         self.window.ui.models[self.id] = self.create_model(self.window)

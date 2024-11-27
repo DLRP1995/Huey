@@ -6,7 +6,7 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.17 03:00:00                  #
+# Updated Date: 2024.11.21 17:00:00                  #
 # ================================================== #
 
 import os
@@ -169,6 +169,20 @@ class UI:
         :return: status text
         """
         return self.nodes['status'].text()
+
+    def show_loading(self):
+        """Show loading"""
+        if self.window.core.config.get('layout.animation.disable', False):
+            return
+        self.window.ui.nodes['anim.loading'].start_anim()
+        self.window.ui.nodes['anim.loading'].show()
+
+    def hide_loading(self):
+        """Hide loading"""
+        if self.window.core.config.get('layout.animation.disable', False):
+            return
+        self.window.ui.nodes['anim.loading'].stop_anim()
+        self.window.ui.nodes['anim.loading'].hide()
 
     def setup_font(self):
         """Load and setup UI fonts"""

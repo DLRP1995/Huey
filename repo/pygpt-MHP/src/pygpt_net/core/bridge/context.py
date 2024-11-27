@@ -6,11 +6,8 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.20 03:00:00                  #
+# Updated Date: 2024.11.26 19:00:00                  #
 # ================================================== #
-
-import time
-from datetime import datetime, timedelta
 
 from pygpt_net.item.ctx import CtxItem
 from pygpt_net.item.model import ModelItem
@@ -42,6 +39,7 @@ class BridgeContext:
         self.attachments = kwargs.get("attachments", [])
         self.file_ids = kwargs.get("file_ids", [])
         self.reply_context = kwargs.get("reply_ctx", None)  # ReplyContext
+        self.multimodal_ctx = kwargs.get("multimodal_ctx", MultimodalContext())  # AudioContext
 
         # check types
         if self.ctx is not None and not isinstance(self.ctx, CtxItem):
@@ -81,6 +79,33 @@ class BridgeContext:
         if self.model is not None:
             data["model"] = self.model.to_dict()
 
+        # sort by keys
+        data = dict(sorted(data.items(), key=lambda item: item[0]))
+        return data
+
+class MultimodalContext:
+    def __init__(self, **kwargs):
+        """
+        Multimodal context
+
+        :param kwargs: keyword arguments
+        """
+        self.is_audio_input = kwargs.get("is_audio_input", False)
+        self.is_audio_output = kwargs.get("is_audio_output", False)
+        self.audio_data = kwargs.get("audio_data", None)
+        self.audio_format = kwargs.get("audio_format", "wav")
+
+    def to_dict(self) -> dict:
+        """
+        Return as dictionary
+
+        :return: dictionary
+        """
+        data = {
+            "is_audio_input": self.is_audio_input,
+            "is_audio_output": self.is_audio_output,
+            "audio_format": self.audio_format,
+        }
         # sort by keys
         data = dict(sorted(data.items(), key=lambda item: item[0]))
         return data

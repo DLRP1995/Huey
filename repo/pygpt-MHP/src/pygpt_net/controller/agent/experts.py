@@ -6,9 +6,13 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.20 03:00:00                  #
+# Updated Date: 2024.11.21 20:00:00                  #
 # ================================================== #
 
+from pygpt_net.core.types import (
+    MODE_AGENT,
+    MODE_EXPERT,
+)
 from pygpt_net.core.events import KernelEvent, RenderEvent
 from pygpt_net.core.bridge import BridgeContext
 from pygpt_net.core.ctx.reply import ReplyContext
@@ -51,7 +55,7 @@ class Experts:
 
         :return: True if experts are enabled
         """
-        modes = ["agent", "expert"]
+        modes = [MODE_AGENT, MODE_EXPERT]
         mode = self.window.core.config.get('mode')
         if mode in modes or self.window.controller.plugins.is_type_enabled("expert"):
             return True
@@ -66,7 +70,7 @@ class Experts:
         :param parent_id: Parent ID
         """
         # if agent enabled
-        if self.window.controller.agent.enabled():
+        if self.window.controller.agent.legacy.enabled():
             prev_prompt = sys_prompt
             sys_prompt = self.window.core.prompt.get("agent.instruction")
             if prev_prompt is not None and prev_prompt.strip() != "":
@@ -74,15 +78,15 @@ class Experts:
 
         # expert or agent mode
         if self.window.controller.agent.experts.enabled() and parent_id is None:  # master expert has special prompt
-            if self.window.controller.agent.enabled():  # if agent then leave agent prompt
+            if self.window.controller.agent.legacy.enabled():  # if agent then leave agent prompt
                 sys_prompt += "\n\n" + self.window.core.experts.get_prompt()  # both, agent + experts
             else:
                 sys_prompt = self.window.core.experts.get_prompt()
                 # mode = "chat"  # change mode to chat for expert
 
         # if global mode is agent
-        if mode == 'agent':
-            sys_prompt = self.window.controller.agent.flow.on_system_prompt(
+        if mode == MODE_AGENT:
+            sys_prompt = self.window.controller.agent.legacy.on_system_prompt(
                 sys_prompt,
                 append_prompt=None,  # sys prompt from preset is used here
                 auto_stop=self.window.core.config.get('agent.auto_stop'),
@@ -118,7 +122,7 @@ class Experts:
                             "stream": stream_mode,
                         }
                         event = RenderEvent(RenderEvent.END, data)
-                        self.window.core.dispatcher.dispatch(event)  # close previous render
+                        self.window.dispatch(event)  # close previous render
                         for expert_id in mentions:
                             if not self.window.core.experts.exists(expert_id):
                                 self.log("Expert not found: " + expert_id)
@@ -140,7 +144,7 @@ class Experts:
                                 'context': context,
                                 'extra': {},
                             })
-                            self.window.core.dispatcher.dispatch(event)
+                            self.window.dispatch(event)
 
                             num_calls += 1
                         if num_calls > 0:

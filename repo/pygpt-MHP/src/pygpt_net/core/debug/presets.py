@@ -6,11 +6,24 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.02.25 22:00:00                  #
+# Updated Date: 2024.11.26 19:00:00                  #
 # ================================================== #
 
 import os
 
+from pygpt_net.core.types import (
+    MODE_AGENT,
+    MODE_AGENT_LLAMA,
+    MODE_ASSISTANT,
+    MODE_AUDIO,
+    MODE_CHAT,
+    MODE_COMPLETION,
+    MODE_EXPERT,
+    MODE_IMAGE,
+    MODE_LANGCHAIN,
+    MODE_LLAMA_INDEX,
+    MODE_VISION,
+)
 
 class PresetsDebug:
     def __init__(self, window=None):
@@ -42,14 +55,17 @@ class PresetsDebug:
                 'ai_name': preset.ai_name,
                 'user_name': preset.user_name,
                 'prompt': preset.prompt,
-                'chat': preset.chat,
-                'completion': preset.completion,
-                'img': preset.img,
-                'vision': preset.vision,
-                'langchain': preset.langchain,
-                'assistant': preset.assistant,
-                'llama_index': preset.llama_index,
-                'agent': preset.agent,
+                MODE_CHAT: preset.chat,
+                MODE_COMPLETION: preset.completion,
+                MODE_IMAGE: preset.img,
+                MODE_VISION: preset.vision,
+                MODE_LANGCHAIN: preset.langchain,
+                MODE_ASSISTANT: preset.assistant,
+                MODE_LLAMA_INDEX: preset.llama_index,
+                MODE_AGENT: preset.agent,
+                MODE_AGENT_LLAMA: preset.agent_llama,
+                MODE_EXPERT: preset.expert,
+                MODE_AUDIO: preset.audio,
                 'temperature': preset.temperature,
                 'version': preset.version,
             }

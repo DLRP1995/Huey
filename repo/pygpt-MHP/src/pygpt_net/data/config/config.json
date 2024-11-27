@@ -1,8 +1,8 @@
 {
   "__meta__": {
-    "version": "2.4.17",
-    "app.version": "2.4.17",
-    "updated_at": "2024-11-20T00:00:00"
+    "version": "2.4.34",
+    "app.version": "2.4.34",
+    "updated_at": "2024-11-26T00:00:00"
   },
   "access.audio.event.speech": false,
   "access.audio.event.speech.disabled": [],
@@ -65,12 +65,18 @@
   "assistant": "",
   "assistant_thread": "",
   "assistant.store.hide_threads": true,
+  "attachments_auto_index": false,
   "attachments_send_clear": true,
   "attachments_capture_clear": true,
   "audio.transcribe.convert_video": true,
   "context_threshold": 200,
   "cmd": false,
   "ctx": "",
+  "ctx.attachment.img": false,
+  "ctx.attachment.mode": "full",
+  "ctx.attachment.summary.model": "gpt-4o-mini",
+  "ctx.attachment.query.model": "gpt-4o-mini",
+  "ctx.attachment.verbose": false,
   "ctx.auto_summary": true,
   "ctx.auto_summary.model": "gpt-4o-mini",
   "ctx.convert_lists": false,
@@ -107,6 +113,7 @@
     "llama_index": "gpt-4o-mini",
     "vision": "gpt-4o",
     "agent": "gpt-4o",
+    "agent_llama": "gpt-4o",
     "expert": "gpt-4o"
   },
   "current_preset": {
@@ -118,6 +125,7 @@
     "llama_index": "",
     "vision": "",
     "agent": "",
+    "agent_llama": "",
     "expert": ""
   },
   "debug": false,
@@ -141,6 +149,7 @@
   "interpreter.input": "",
   "interpreter.ipython": true,
   "lang": "en",
+  "layout.animation.disable": false,
   "layout.density": -1,
   "layout.dialog.geometry.store": true,
   "layout.dialog.geometry": {},
@@ -190,7 +199,7 @@
       }
   ],
   "llama.idx.embeddings.limit.rpm": 100,
-  "llama.idx.excluded.ext": "3g2,3gp,7z,a,aac,aiff,alac,apk,apk,apng,app,ar,avif,bin,bz2,cab,class,deb,deb,dll,dmg,dmg,drv,dsd,dylib,dylib,ear,egg,elf,esd,exe,flac,flv,gz,heic,heif,ico,img,iso,jar,ko,lib,lz,lz4,m2v,mpc,msi,nrg,o,ogg,ogv,pcm,pkg,pkg,psd,pyc,rar,rpm,rpm,so,so,svg,swm,sys,tar,vdi,vhd,vhdx,vmdk,vob,war,whl,wim,wma,wmv,xz,zip,zst",
+  "llama.idx.excluded.ext": "3g2,3gp,7z,a,aac,aiff,alac,apk,apk,apng,app,ar,avif,bin,cab,class,deb,deb,dll,dmg,dmg,drv,dsd,dylib,dylib,ear,egg,elf,esd,exe,flac,flv,heic,heif,ico,img,iso,jar,ko,lib,lz,lz4,m2v,mpc,msi,nrg,o,ogg,ogv,pcm,pkg,pkg,psd,pyc,rar,rpm,rpm,so,so,svg,swm,sys,vdi,vhd,vhdx,vmdk,vob,war,whl,wim,wma,wmv,xz,zst",
   "llama.idx.excluded.force": false,
   "llama.idx.list": [
       {
@@ -218,7 +227,7 @@
   "max_tokens_length": 32000,
   "max_total_tokens": 128000,
   "mode": "chat",
-  "model": "gpt-4o-mini",
+  "model": "gpt-4o",
   "notepad.num": 1,
   "organization_key": "",
   "output_timestamp": false,
@@ -237,6 +246,7 @@
     "cmd_files": false,
     "cmd_history": false,
     "cmd_serial": false,
+    "cmd_system": false,
     "cmd_web": false,
     "crontab": false,
     "experts": false,

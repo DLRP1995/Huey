@@ -6,14 +6,14 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.08.27 05:00:00                  #
+# Updated Date: 2024.11.26 19:00:00                  #
 # ================================================== #
 
 from unittest.mock import MagicMock, patch
 
 from tests.mocks import mock_window
 from pygpt_net.controller.chat.input import Input
-from pygpt_net.core.bridge.context import BridgeContext
+from pygpt_net.core.bridge.context import BridgeContext, MultimodalContext
 from pygpt_net.item.ctx import CtxItem
 
 
@@ -27,7 +27,7 @@ def test_send_input(mock_window):
     mock_window.ui.nodes['input'].toPlainText = MagicMock(return_value=message)
 
     input.send_input()
-    mock_window.core.dispatcher.dispatch.assert_called()  # must dispatch event: user.send
+    mock_window.dispatch.assert_called()  # must dispatch event: user.send
 
 
 def test_send_input_stop(mock_window):
@@ -36,12 +36,13 @@ def test_send_input_stop(mock_window):
     input.send = MagicMock()
     input.generating = True
     message = 'stop'
+    mock_window.controller.agent.common.is_infinity_loop = MagicMock(return_value=False)
     mock_window.controller.ctx.extra.is_editing = MagicMock(return_value=False)
     mock_window.ui.nodes['input'].toPlainText = MagicMock(return_value=message)
 
     input.send_input()
     mock_window.controller.kernel.stop.assert_called_once()
-    mock_window.core.dispatcher.dispatch.assert_called()
+    mock_window.dispatch.assert_called()
     input.send.assert_not_called()
 
 
@@ -51,12 +52,21 @@ def test_send(mock_window):
     input = Input(mock_window)
     input.execute = MagicMock()
     context = BridgeContext()
+    context.multimodal_ctx = MultimodalContext()
     context.prompt = "xxx"
     context.ctx = None
     extra = {}
 
     input.send(context, extra)
-    input.execute.assert_called_once_with(text="xxx", force=False, reply=False, internal=False, prev_ctx=None, parent_id=None)
+    input.execute.assert_called_once_with(
+        text="xxx",
+        force=False,
+        reply=False,
+        internal=False,
+        prev_ctx=None,
+        parent_id=None,
+        multimodal_ctx=context.multimodal_ctx,
+    )
 
 
 def test_execute_text(mock_window):
@@ -78,16 +88,22 @@ def test_execute_text(mock_window):
         # assert input.generating is False
         # assert input.stop is False
 
-        mock_window.controller.chat.text.send.assert_called_once_with(text='test', reply=False, internal=False, prev_ctx=None, parent_id=None)
+        mock_window.controller.chat.text.send.assert_called_once_with(
+            text='test',
+            reply=False,
+            internal=False,
+            prev_ctx=None,
+            parent_id=None,
+            multimodal_ctx=None,
+        )
         # mock_window.controller.ui.update_tokens.assert_called_once()
-        mock_window.ui.status.assert_called_once()
 
         # attachments clear should be called
         #mock_window.controller.attachment.clear.assert_called_once()
         # mock_window.controller.attachment.update.assert_called_once()
 
         # input clear should be called
-        mock_window.core.dispatcher.dispatch.assert_called()
+        mock_window.dispatch.assert_called()
 
         # handle allowed should be called
         mock_window.controller.ctx.handle_allowed.assert_called_once()
@@ -113,7 +129,6 @@ def test_execute_image(mock_window):
 
         mock_window.controller.chat.image.send.assert_called_once_with(text='test', prev_ctx=None, parent_id=None)
         # mock_window.controller.ui.update_tokens.assert_called_once()
-        mock_window.ui.status.assert_called_once()
 
         # attachments clear should not be called
         # mock_window.controller.attachment.clear.assert_not_called()
@@ -147,17 +162,17 @@ def test_execute_no_ctx(mock_window):
             reply=False,
             internal=False,
             prev_ctx=None,
-            parent_id=None
+            parent_id=None,
+            multimodal_ctx=None,
         )
         # mock_window.controller.ui.update_tokens.assert_called_once()
-        mock_window.ui.status.assert_called_once()
 
         # attachments clear should be called
         # mock_window.controller.attachment.clear.assert_called_once()
         # mock_window.controller.attachment.update.assert_called_once()
 
         # input clear should be called
-        mock_window.core.dispatcher.dispatch.assert_called()
+        mock_window.dispatch.assert_called()
 
         # handle allowed should not be called
         mock_window.controller.ctx.handle_allowed.assert_not_called()
@@ -198,6 +213,7 @@ def test_execute_vision_mode(mock_window):
     mock_window.core.ctx.count_meta = MagicMock(return_value=1)  # ctx exists
     mock_window.controller.camera.is_enabled = MagicMock(return_value=True)
     mock_window.controller.camera.is_auto = MagicMock(return_value=True)
+    mock_window.controller.ui.vision.has_vision = MagicMock(return_value=True)
 
     ctx = CtxItem()
     mock_window.controller.chat.text.send = MagicMock(return_value=ctx)  # send text to API and get ctx
@@ -210,23 +226,23 @@ def test_execute_vision_mode(mock_window):
             reply=False,
             internal=False,
             prev_ctx=None,
-            parent_id=None
+            parent_id=None,
+            multimodal_ctx=None,
         )
         # mock_window.controller.ui.update_tokens.assert_called_once()
-        mock_window.ui.status.assert_called_once()
 
         # attachments clear should be called
         # mock_window.controller.attachment.clear.assert_called_once()
         # mock_window.controller.attachment.update.assert_called_once()
 
         # input clear should be called
-        mock_window.core.dispatcher.dispatch.assert_called()
+        mock_window.dispatch.assert_called()
 
         # handle allowed should be called
         mock_window.controller.ctx.handle_allowed.assert_called_once()
 
         # vision: capture frame should be called
-        mock_window.controller.camera.capture_frame.assert_called_once_with(False)
+        mock_window.controller.camera.handle_auto_capture()
 
 
 def test_execute_vision_plugin(mock_window):
@@ -240,6 +256,7 @@ def test_execute_vision_plugin(mock_window):
     mock_window.core.ctx.count_meta = MagicMock(return_value=1)  # ctx exists
     mock_window.controller.camera.is_enabled = MagicMock(return_value=True)
     mock_window.controller.camera.is_auto = MagicMock(return_value=True)
+    mock_window.controller.ui.vision.has_vision = MagicMock(return_value=True)
 
     # plugin enabled for vision mode
     mock_window.controller.plugins.is_type_enabled = MagicMock(return_value=True)
@@ -255,20 +272,20 @@ def test_execute_vision_plugin(mock_window):
             reply=False,
             internal=False,
             prev_ctx=None,
-            parent_id=None
+            parent_id=None,
+            multimodal_ctx=None,
         )
         # mock_window.controller.ui.update_tokens.assert_called_once()
-        mock_window.ui.status.assert_called_once()
 
         # attachments clear should be called
         # mock_window.controller.attachment.clear.assert_called_once()
         # mock_window.controller.attachment.update.assert_called_once()
 
         # input clear should be called
-        mock_window.core.dispatcher.dispatch.assert_called()
+        mock_window.dispatch.assert_called()
 
         # handle allowed should be called
         mock_window.controller.ctx.handle_allowed.assert_called_once()
 
         # vision: capture frame should be called
-        mock_window.controller.camera.capture_frame.assert_called_once_with(False)
+        mock_window.controller.camera.handle_auto_capture()

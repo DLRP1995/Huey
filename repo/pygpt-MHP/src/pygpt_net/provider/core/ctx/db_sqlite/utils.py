@@ -6,7 +6,7 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.08.29 04:00:00                  #
+# Updated Date: 2024.11.26 19:00:00                  #
 # ================================================== #
 
 import json
@@ -151,12 +151,35 @@ def unpack_item(item: CtxItem, row: dict) -> CtxItem:
     item.images = unpack_item_value(row['images_json'])
     item.files = unpack_item_value(row['files_json'])
     item.attachments = unpack_item_value(row['attachments_json'])
+    item.additional_ctx = unpack_item_value(row['additional_ctx_json'])
     item.extra = unpack_item_value(row['extra'])
     item.input_tokens = unpack_var(row['input_tokens'], 'int')
     item.output_tokens = unpack_var(row['output_tokens'], 'int')
     item.total_tokens = unpack_var(row['total_tokens'], 'int')
     item.internal = unpack_var(row['is_internal'], 'bool')
     item.doc_ids = unpack_item_value(row['docs_json'])
+    item.audio_id = row['audio_id']
+    item.audio_expires_ts = row['audio_expires_ts']
+
+    # set defaults
+    if item.cmds is None:
+        item.cmds = []
+    if item.results is None:
+        item.results = []
+    if item.urls is None:
+        item.urls = []
+    if item.images is None:
+        item.images = []
+    if item.files is None:
+        item.files = []
+    if item.attachments is None:
+        item.attachments = []
+    if item.additional_ctx is None:
+        item.additional_ctx = []
+    if item.doc_ids is None:
+        item.doc_ids = []
+    if item.extra is None:
+        item.extra = {}
     return item
 
 
@@ -192,6 +215,10 @@ def unpack_meta(meta: CtxMeta, row: dict) -> CtxMeta:
     meta.label = unpack_var(row['label'], 'int')
     meta.indexes = unpack_item_value(row['indexes_json'])
     meta.group_id = unpack_var(row['group_id'], 'int')
+    meta.additional_ctx = unpack_item_value(row['additional_ctx_json'])
+
+    if meta.additional_ctx is None:
+        meta.additional_ctx = []
     return meta
 
 

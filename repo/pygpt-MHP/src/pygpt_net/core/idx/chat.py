@@ -6,7 +6,7 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.20 03:00:00                  #
+# Updated Date: 2024.11.23 21:00:00                  #
 # ================================================== #
 
 import json
@@ -15,6 +15,10 @@ from llama_index.core.llms import ChatMessage, MessageRole
 from llama_index.core.prompts import ChatPromptTemplate
 from llama_index.core.memory import ChatMemoryBuffer
 
+from pygpt_net.core.types import (
+    MODE_CHAT,
+    MODE_AGENT_LLAMA,
+)
 from pygpt_net.core.bridge.context import BridgeContext
 from pygpt_net.item.model import ModelItem
 from pygpt_net.item.ctx import CtxItem
@@ -54,7 +58,7 @@ class Chat:
             )
 
         # if not raw, check if chat mode is available
-        if "chat" in model.llama_index['mode']:
+        if MODE_CHAT in model.llama_index['mode']:
             return self.chat(
                 context=context,
                 extra=extra,
@@ -391,10 +395,97 @@ class Chat:
                 ctx.add_doc_meta(self.get_metadata(response.source_nodes))  # store metadata
                 output = response.response
 
-        # clean tmp index# clean tmp index
+        # clean tmp index
         self.log("Removing temporary in-memory index: {} ({})...".format(idx, tmp_id))
         self.storage.clean_tmp(tmp_id)  # clean memory
         self.log("Returning response: {}...".format(output))
+        return output
+
+    def query_attachment(
+            self,
+            query: str,
+            path: str,
+            model: ModelItem = None
+    ) -> str:
+        """
+        Query attachment
+
+        :param query: query
+        :param path: path to index
+        :param model: model
+        :return: response
+        """
+        if model is None:
+            model = self.window.core.models.from_defaults()
+        service_context = self.window.core.idx.llm.get_service_context(model=model)
+        index = self.storage.get_ctx_idx(path, service_context=service_context)
+
+        # 1. try to retrieve directly from index
+        retriever = index.as_retriever()
+        nodes = retriever.retrieve(query)
+        response = ""
+        for node in nodes:
+            if node.score > 0.5:
+                response = node.text
+                break
+        output = ""
+        if response:
+            output = str(response)
+        else:
+            # 2. try with prepared prompt
+            prompt = """
+            # Task
+            Translate the below user prompt into a suitable, short query for the RAG engine, so it can fetch the context 
+            related to the query from the vector database. 
+            
+            # Important rules
+            1. Edit the user prompt in a way that allows for the best possible result. 
+            2. In your response, give me only the reworded query, without any additional information from yourself. 
+            
+            # User prompt:
+            ```{prompt}```
+            """.format(prompt=query)
+            response_prepare = index.as_query_engine(
+                llm=service_context.llm,
+                streaming=False,
+            ).query(prompt)
+            if response_prepare:
+                # try the final query with prepared prompt
+                final_response = index.as_query_engine(
+                    llm=service_context.llm,
+                    streaming=False,
+                ).query(response_prepare.response)
+                if final_response:
+                    output = str(final_response.response)
+        return output
+
+    def query_retrieval(
+            self,
+            query: str,
+            idx: str,
+            model: ModelItem = None
+    ) -> str:
+        """
+        Query attachment
+
+        :param query: query
+        :param idx: index id
+        :param model: model
+        :return: response
+        """
+        if model is None:
+            model = self.window.core.models.from_defaults()
+        index, service_context = self.get_index(idx, model)
+        retriever = index.as_retriever()
+        nodes = retriever.retrieve(query)
+        response = ""
+        for node in nodes:
+            if node.score > 0.5:
+                response = node.text
+                break
+        output = ""
+        if response:
+            output = str(response)
         return output
 
     def get_memory_buffer(self, history: list, llm = None) -> ChatMemoryBuffer:
@@ -513,7 +604,7 @@ class Chat:
         :param msg: message
         """
         # disabled logging for thread safety
-        if self.window.core.config.get("mode") == "agent_llama":
+        if self.window.core.config.get("mode") == MODE_AGENT_LLAMA:
             return
         is_log = False
         if self.window.core.config.has("log.llama") \

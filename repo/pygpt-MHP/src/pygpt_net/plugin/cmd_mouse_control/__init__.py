@@ -6,7 +6,7 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.20 03:00:00                  #
+# Updated Date: 2024.11.26 04:00:00                  #
 # ================================================== #
 
 from PySide6.QtCore import Slot, QTimer
@@ -24,7 +24,7 @@ class Plugin(BasePlugin):
     def __init__(self, *args, **kwargs):
         super(Plugin, self).__init__(*args, **kwargs)
         self.id = "cmd_mouse_control"
-        self.name = "Command: Mouse And Keyboard"
+        self.name = "Mouse And Keyboard"
         self.description = "Provides ability to control mouse and keyboard"
         self.prefix = "Mouse"
         self.order = 100
@@ -97,12 +97,14 @@ class Plugin(BasePlugin):
         if not is_cmd:
             return
 
+        # set state: busy
+        self.cmd_prepare(ctx, my_commands)
+
         try:
             worker = Worker()
             worker.from_defaults(self)
             worker.cmds = my_commands
             worker.ctx = ctx
-            worker.signals.screenshot.connect(self.handle_screenshot)
 
             if not self.is_async(ctx):
                 worker.run()
@@ -113,7 +115,7 @@ class Plugin(BasePlugin):
             self.error(e)
 
     @Slot(list, object, dict)
-    def handle_finished(self, responses: list, ctx: CtxItem = None, extra_data: dict = None):
+    def handle_finished_more(self, responses: list, ctx: CtxItem = None, extra_data: dict = None):
         """
         Handle finished responses signal
 
@@ -126,7 +128,6 @@ class Plugin(BasePlugin):
             if ctx is not None:
                 ctx.results.append(response)
                 ctx.reply = True
-
         self.handle_delayed(ctx)
 
     @Slot(object)
@@ -140,31 +141,18 @@ class Plugin(BasePlugin):
             self.window.controller.attachment.clear_silent()
             path = self.window.controller.painter.capture.screenshot(attach_cursor=True,
                                                                      silent=True)  # attach screenshot
-            ctx.images.append(path)
-            ctx.images_before.append(path)
+            
+            img_path = self.window.core.filesystem.make_local(path)
+            ctx.images.append(img_path)
+            #ctx.images_before.append(path)
 
         context = BridgeContext()
         context.ctx = ctx
-        extra = {
-            "flush": True,
-        }            
         event = KernelEvent(KernelEvent.REPLY_ADD, {
             'context': context,
-            'extra': extra,
+            'extra': {},
         })
-        self.window.core.dispatcher.dispatch(event)
-
-    @Slot(dict, object)
-    def handle_screenshot(self, response: dict, ctx: CtxItem = None):
-        """
-        Handle screenshot
-
-        :param response: response
-        :param ctx: context (CtxItem)
-        """
-        self.window.controller.attachment.clear_silent()
-        self.window.controller.painter.capture.screenshot(attach_cursor=True, silent=True)
-        self.reply(response, ctx)
+        self.window.dispatch(event)
 
     def on_system_prompt(self, prompt: str) -> str:
         """

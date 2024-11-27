@@ -6,13 +6,14 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.20 03:00:00                  #
+# Updated Date: 2024.11.20 21:00:00                  #
 # ================================================== #
 
 import sys
 import argparse
 from logging import ERROR, WARNING, INFO, DEBUG
 
+from PySide6 import QtCore
 from PySide6.QtCore import QCoreApplication, Qt
 from PySide6.QtGui import QScreen
 from PySide6.QtWidgets import QApplication
@@ -100,6 +101,7 @@ class Launcher:
         Platforms.prepare()  # setup platform specific options
         QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
         self.app = QApplication(sys.argv)
+        self.app.setAttribute(QtCore.Qt.AA_DontUseNativeMenuBar)
         self.window = MainWindow(self.app, args=args)
         self.shortcut_filter = GlobalShortcutFilter(self.window)
 
@@ -225,7 +227,7 @@ class Launcher:
 
     def add_agent(self, agent: BaseAgent):
         """
-        Register agent (Llama-index agent)
+        Register agent (LlamaIndex agent)
 
         :param agent: Agent instance
         """
@@ -251,6 +253,6 @@ class Launcher:
         self.app.setWindowIcon(self.window.ui.get_app_icon())
         self.window.ui.tray.setup(self.app)
         self.window.controller.after_setup()
-        self.window.core.dispatcher.dispatch(AppEvent(AppEvent.APP_STARTED))  # app event
+        self.window.dispatch(AppEvent(AppEvent.APP_STARTED))  # app event
         self.window.installEventFilter(self.shortcut_filter)
         sys.exit(self.app.exec())

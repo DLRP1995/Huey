@@ -6,7 +6,7 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.17 03:00:00                  #
+# Updated Date: 2024.11.23 00:00:00                  #
 # ================================================== #
 
 import copy
@@ -1659,6 +1659,62 @@ class Patch:
                         and 'cmd.ipython_execute' in data['plugins']['cmd_code_interpreter']:
                     # remove
                     del data['plugins']['cmd_code_interpreter']['cmd.ipython_execute']
+                updated = True
+
+            # < 2.4.19
+            if old < parse_version("2.4.19"):
+                print("Migrating config from < 2.4.19...")
+                if 'layout.animation.disable' not in data:
+                    data["layout.animation.disable"] = self.window.core.config.get_base('layout.animation.disable')
+                if 'cmd_code_interpreter' in data['plugins'] \
+                        and 'cmd.ipython_execute' in data['plugins']['cmd_code_interpreter']:
+                    # remove
+                    del data['plugins']['cmd_code_interpreter']['cmd.ipython_execute']
+                updated = True
+
+            # < 2.4.21
+            if old < parse_version("2.4.21"):
+                print("Migrating config from < 2.4.21...")
+                if 'ctx.attachment.mode' not in data:
+                    data["ctx.attachment.mode"] = self.window.core.config.get_base('ctx.attachment.mode')
+                if 'ctx.attachment.summary.model' not in data:
+                    data["ctx.attachment.summary.model"] = self.window.core.config.get_base('ctx.attachment.summary.model')
+                if 'ctx.attachment.verbose' not in data:
+                    data["ctx.attachment.verbose"] = self.window.core.config.get_base('ctx.attachment.verbose')
+                updated = True
+
+            # < 2.4.22
+            if old < parse_version("2.4.22"):
+                print("Migrating config from < 2.4.22...")
+                data["ctx.attachment.mode"] = self.window.core.config.get_base('ctx.attachment.mode')
+                if 'ctx.attachment.img' not in data:
+                    data["ctx.attachment.img"] = self.window.core.config.get_base(
+                        'ctx.attachment.img')
+                updated = True
+
+            # < 2.4.29
+            if old < parse_version("2.4.29"):
+                print("Migrating config from < 2.4.29...")
+                if 'cmd_code_interpreter' in data['plugins'] \
+                        and 'ipython_dockerfile' in data['plugins']['cmd_code_interpreter']:
+                    # remove
+                    del data['plugins']['cmd_code_interpreter']['ipython_dockerfile']
+                updated = True
+
+            # < 2.4.31
+            if old < parse_version("2.4.31"):
+                print("Migrating config from < 2.4.31...")
+                if 'attachments_auto_index' not in data:
+                    data["attachments_auto_index"] = self.window.core.config.get_base(
+                        'attachments_auto_index')
+                updated = True
+
+            # < 2.4.34
+            if old < parse_version("2.4.34"):
+                print("Migrating config from < 2.4.34...")
+                if 'ctx.attachment.query.model' not in data:
+                    data["ctx.attachment.query.model"] = self.window.core.config.get_base(
+                        'ctx.attachment.query.model')
                 updated = True
 
         # update file

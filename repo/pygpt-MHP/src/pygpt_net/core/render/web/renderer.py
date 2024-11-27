@@ -6,7 +6,7 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.17 03:00:00                  #
+# Updated Date: 2024.11.26 04:00:00                  #
 # ================================================== #
 
 import json
@@ -114,7 +114,7 @@ class Renderer(BaseRenderer):
 
         :param pid: context PID
         """
-        if not self.pids[pid].initialized:
+        if pid in self.pids and not self.pids[pid].initialized:
             self.flush(pid)
             self.pids[pid].initialized = True
         else:
@@ -142,6 +142,8 @@ class Renderer(BaseRenderer):
         :param stream: True if it is a stream
         """
         pid = self.get_or_create_pid(meta)
+        if pid is None:
+            return
         if self.pids[pid].item is not None and stream:
             self.append_context_item(meta, self.pids[pid].item)
             self.pids[pid].item = None
@@ -173,7 +175,7 @@ class Renderer(BaseRenderer):
         :param ctx: context item
         """
         pid = self.get_or_create_pid(meta)
-        if self.window.controller.agent.enabled():
+        if self.window.controller.agent.legacy.enabled():
             if self.pids[pid].item is not None:
                 self.append_context_item(meta, self.pids[pid].item)
                 self.pids[pid].item = None
@@ -418,16 +420,20 @@ class Renderer(BaseRenderer):
         # files and attachments, TODO check attachments
         c = len(ctx.files)
         if c > 0:
+            files_html = []
             n = 1
             for file in ctx.files:
-                if file in appended:
+                if file in appended or file in self.pids[pid].files_appended:
                     continue
                 try:
                     appended.append(file)
-                    html += self.body.get_file_html(file, n, c)
+                    files_html.append(self.body.get_file_html(file, n, c))
+                    self.pids[pid].files_appended.append(file)
                     n += 1
                 except Exception as e:
                     pass
+            if files_html:
+                html += "<br/>" + "<br/>".join(files_html)
 
         # urls
         c = len(ctx.urls)
@@ -517,6 +523,7 @@ class Renderer(BaseRenderer):
         self.clear_chunks(pid)
         self.pids[pid].images_appended = []
         self.pids[pid].urls_appended = []
+        self.pids[pid].files_appended = []
         self.get_output_node_by_pid(pid).reset_current_content()
         self.reset_names_by_pid(pid)
 
@@ -538,6 +545,8 @@ class Renderer(BaseRenderer):
 
         :param pid: context PID
         """
+        if pid is None:
+            return
         self.clear_chunks_input(pid)
         self.clear_chunks_output(pid)
 
@@ -762,8 +771,9 @@ class Renderer(BaseRenderer):
             '<div class="name-header name-bot">{name_bot}</div>'
             '<div class="msg">'
             '{html}'
-            '{html_tools}'
+            
             '<div class="msg-tool-extra">{tool_extra}</div>'
+            '{html_tools}'
             '<div class="msg-extra">{extra}</div>'
             '{footer}'
             '</div>'
@@ -880,6 +890,8 @@ class Renderer(BaseRenderer):
 
        :param meta: context meta
         """
+        if meta is None:
+            return
         pid = self.get_or_create_pid(meta)
         self.reset_names_by_pid(pid)
 

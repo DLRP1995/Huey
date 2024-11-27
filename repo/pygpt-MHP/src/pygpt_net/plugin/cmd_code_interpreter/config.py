@@ -6,7 +6,7 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.18 19:00:00                  #
+# Updated Date: 2024.11.25 02:00:00                  #
 # ================================================== #
 
 from pygpt_net.plugin.base.config import BaseConfig, BasePlugin
@@ -23,37 +23,53 @@ class Config(BaseConfig):
 
         :param plugin: plugin instance
         """
-        dockerfile = '# Tip: After making changes to this Dockerfile, you must rebuild the image to apply the changes'
-        dockerfile += '(Menu -> Tools -> Rebuild IPython Docker Image)'
-        dockerfile += '\n\n'
-        dockerfile += 'FROM python:3.9'
-        dockerfile += '\n\n'
-        dockerfile += '# You can customize the packages installed by default here:'
-        dockerfile += '\n# ========================================================'
-        dockerfile += '\nRUN pip install jupyter ipykernel'
-        dockerfile += '\n# ========================================================'
-        dockerfile += '\n\n'
-        dockerfile += 'RUN mkdir /data'
-        dockerfile += '\n\n'
-        dockerfile += '# Expose the necessary ports for Jupyter kernel communication'
-        dockerfile += '\nEXPOSE 5555 5556 5557 5558 5559'
-        dockerfile += '\n\n'
-        dockerfile += '# Data directory, bound as a volume to the local \'data/ipython\' directory'
-        dockerfile += '\nWORKDIR /data'
-        dockerfile += '\n\n'
-        dockerfile += '# Start the IPython kernel with specified ports and settings'
-        dockerfile += '\nCMD ["ipython", "kernel", \\'
-        dockerfile += '\n--ip=0.0.0.0, \\'
-        dockerfile += '\n--transport=tcp, \\'
-        dockerfile += '\n--shell=5555, \\'
-        dockerfile += '\n--iopub=5556, \\'
-        dockerfile += '\n--stdin=5557, \\'
-        dockerfile += '\n--control=5558, \\'
-        dockerfile += '\n--hb=5559, \\'
-        dockerfile += '\n--Session.key=19749810-8febfa748186a01da2f7b28c, \\'
-        dockerfile += '\n--Session.signature_scheme=hmac-sha256]'
+        dockerfile = '''
+        # Tip: After making changes to this Dockerfile, you must rebuild the image to apply the changes(Menu -> Tools -> Rebuild IPython Docker Image)
 
-        # cmd enable/disable
+        FROM python:3.9
+
+        # You can customize the packages installed by default here:
+        # ========================================================
+        RUN pip install jupyter ipykernel
+        # ========================================================
+
+        RUN mkdir /data
+
+        # Expose the necessary ports for Jupyter kernel communication
+        EXPOSE 5555 5556 5557 5558 5559
+
+        # Data directory, bound as a volume to the local 'data/ipython' directory
+        WORKDIR /data
+
+        # Start the IPython kernel with specified ports and settings
+        CMD ["ipython", "kernel", \
+        "--ip=0.0.0.0", \
+        "--transport=tcp", \
+        "--shell=5555", \
+        "--iopub=5556", \
+        "--stdin=5557", \
+        "--control=5558", \
+        "--hb=5559", \
+        "--Session.key=19749810-8febfa748186a01da2f7b28c", \
+        "--Session.signature_scheme=hmac-sha256"]
+        '''
+
+        dockerfile_legacy = 'FROM python:3.9-alpine'
+        dockerfile_legacy += '\n\n'
+        dockerfile_legacy += 'RUN mkdir /data'
+        dockerfile_legacy += '\n\n'
+        dockerfile_legacy += '# Data directory, bound as a volume to the local \'data/\' directory'
+        dockerfile_legacy += '\nWORKDIR /data'
+
+        plugin.add_option(
+            "sandbox_ipython",
+            type="bool",
+            value=False,
+            label="Sandbox (docker container)",
+            description="Executes commands in sandbox (docker container). "
+                        "Docker must be installed and running.",
+            tab="ipython",
+        )
         plugin.add_option(
             "ipython_dockerfile",
             type="textarea",
@@ -93,7 +109,9 @@ class Config(BaseConfig):
         )
         plugin.add_cmd(
             "ipython_execute",
-            instruction="execute Python code in IPython interpreter (in current kernel) and get output.",
+            instruction="execute Python code in IPython interpreter (in current kernel) and get output. "
+                        "Tip: when generating plots or other image data always print path to generated image at "
+                        "the end and provide local path (prefixed with file://, not sandbox:) to the user.",
             params=[
                 {
                     "name": "code",
@@ -106,6 +124,7 @@ class Config(BaseConfig):
             description="Allows Python code execution in IPython interpreter (in current kernel)",
             tab="ipython",
         )
+        """
         plugin.add_cmd(
             "ipython_execute_new",
             instruction="execute Python code in the IPython interpreter in a new kernel and get the output. Use this option only if a kernel restart is required; otherwise, use `ipython_execute` to run the code in the current session",
@@ -121,6 +140,27 @@ class Config(BaseConfig):
             description="Allows Python code execution in IPython interpreter (in new kernel)",
             tab="ipython",
         )
+        """
+
+        volumes_keys = {
+            "enabled": "bool",
+            "docker": "text",
+            "host": "text",
+        }
+        volumes_items = [
+            {
+                "enabled": True,
+                "docker": "/data",
+                "host": "{workdir}",
+            },
+        ]
+        ports_keys = {
+            "enabled": "bool",
+            "docker": "text",
+            "host": "int",
+        }
+        ports_items = []
+
         plugin.add_cmd(
             "ipython_kernel_restart",
             instruction="restart IPython kernel",
@@ -169,15 +209,6 @@ class Config(BaseConfig):
             tab="ipython",
             advanced=True,
         )
-
-        plugin.add_option(
-            "python_cmd_tpl",
-            type="text",
-            value="python3 {filename}",
-            label="Python command template",
-            description="Python command template to execute, use {filename} for filename placeholder",
-            tab="python_legacy",
-        )
         plugin.add_option(
             "sandbox_docker",
             type="bool",
@@ -188,20 +219,65 @@ class Config(BaseConfig):
             tab="python_legacy",
         )
         plugin.add_option(
-            "sandbox_docker_image",
+            "python_cmd_tpl",
             type="text",
-            value='python:3.8-alpine',
-            label="Docker image",
-            description="Docker image to use for sandbox",
+            value="python3 {filename}",
+            label="Python command template",
+            description="Python command template to execute, use {filename} for filename placeholder",
             tab="python_legacy",
         )
         plugin.add_option(
-            "auto_cwd",
-            type="bool",
-            value=True,
-            label="Auto-append CWD to sys_exec",
-            description="Automatically append current working directory to sys_exec command",
-            tab="general",
+            "dockerfile",
+            type="textarea",
+            value=dockerfile_legacy,
+            label="Dockerfile",
+            description="Dockerfile",
+            tooltip="Dockerfile",
+            tab="python_legacy",
+        )
+        plugin.add_option(
+            "image_name",
+            type="text",
+            value='pygpt_python_legacy',
+            label="Docker image name",
+            tab="python_legacy",
+        )
+        plugin.add_option(
+            "container_name",
+            type="text",
+            value='pygpt_python_legacy_container',
+            label="Docker container name",
+            tab="python_legacy",
+        )
+        plugin.add_option(
+            "docker_entrypoint",
+            type="text",
+            value='tail -f /dev/null',
+            label="Docker run command",
+            tab="python_legacy",
+            advanced=True,
+        )
+        plugin.add_option(
+            "docker_volumes",
+            type="dict",
+            value=volumes_items,
+            label="Docker volumes",
+            description="Docker volumes mapping",
+            tooltip="Docker volumes mapping",
+            keys=volumes_keys,
+            tab="python_legacy",
+            advanced=True,
+        )
+        plugin.add_option(
+            "docker_ports",
+            type="dict",
+            value=ports_items,
+            label="Docker ports",
+            description="Docker ports mapping",
+            tooltip="Docker ports mapping",
+            keys=ports_keys,
+            tab="python_legacy",
+            advanced=True,
         )
         plugin.add_option(
             "attach_output",
@@ -264,21 +340,6 @@ class Config(BaseConfig):
             enabled=False,
             description="Allows Python code execution (generate and execute from file)",
             tab="python_legacy",
-        )
-        plugin.add_cmd(
-            "sys_exec",
-            instruction="execute ANY system command, script or app in user's environment. Do not use this command to install Python libraries, use IPython environment and IPython commands instead.",
-            params=[
-                {
-                    "name": "command",
-                    "type": "str",
-                    "description": "system command",
-                    "required": True,
-                },
-            ],
-            enabled=True,
-            description="Allows system commands execution",
-            tab="general",
         )
         plugin.add_cmd(
             "get_python_output",

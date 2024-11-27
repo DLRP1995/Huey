@@ -6,15 +6,24 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.20 03:00:00                  #
+# Updated Date: 2024.11.26 19:00:00                  #
 # ================================================== #
 
 from httpx_socks import SyncProxyTransport
 
 from openai import OpenAI, DefaultHttpxClient
 
+from pygpt_net.core.types import (
+    MODE_ASSISTANT,
+    MODE_AUDIO,
+    MODE_CHAT,
+    MODE_COMPLETION,
+    MODE_IMAGE,
+    MODE_VISION,
+)
 from pygpt_net.core.bridge.context import BridgeContext
 
+from .audio import Audio
 from .assistants import Assistants
 from .chat import Chat
 from .completion import Completion
@@ -33,6 +42,7 @@ class Gpt:
         """
         self.window = window
         self.assistants = Assistants(window)
+        self.audio = Audio(window)
         self.chat = Chat(window)
         self.completion = Completion(window)
         self.image = Image(window)
@@ -99,7 +109,7 @@ class Gpt:
         file_ids = context.file_ids  # uploaded files IDs (assistant mode only)
 
         # completion
-        if mode == "completion":
+        if mode == MODE_COMPLETION:
             response = self.completion.send(
                 context=context,
                 extra=extra,
@@ -107,7 +117,7 @@ class Gpt:
             used_tokens = self.completion.get_used_tokens()
 
         # chat
-        elif mode == "chat":
+        elif mode in [MODE_CHAT, MODE_AUDIO]:
             response = self.chat.send(
                 context=context,
                 extra=extra,
@@ -116,14 +126,14 @@ class Gpt:
             self.vision.append_images(ctx)  # append images to ctx if provided
 
         # image
-        elif mode == "image":
+        elif mode == MODE_IMAGE:
             return self.image.generate(
                 context=context,
                 extra=extra,
             )  # return here, async handled
 
         # vision
-        elif mode == "vision":
+        elif mode == MODE_VISION:
             response = self.vision.send(
                 context=context,
                 extra=extra,
@@ -132,7 +142,7 @@ class Gpt:
             self.vision.append_images(ctx)  # append images to ctx if provided
 
         # assistants
-        elif mode == "assistant":
+        elif mode == MODE_ASSISTANT:
             # check if assistant is already running and has tools outputs, then submit them, async handled
             if ctx.run_id is not None and len(tools_outputs) > 0:
                 self.assistants.worker.tools_submit(
@@ -170,9 +180,9 @@ class Gpt:
 
         # get output text from response (not-stream mode)
         output = ""
-        if mode == "completion":
+        if mode == MODE_COMPLETION:
             output = response.choices[0].text.strip()
-        elif mode in ["chat", "vision"]:
+        elif mode in [MODE_CHAT, MODE_VISION]:
             if response.choices[0]:
                 if response.choices[0].message.content:
                     output = response.choices[0].message.content.strip()
@@ -180,6 +190,15 @@ class Gpt:
                     ctx.tool_calls = self.window.core.command.unpack_tool_calls(
                         response.choices[0].message.tool_calls,
                     )
+        # audio
+        elif mode in [MODE_AUDIO]:
+            if response.choices[0]:
+                if response.choices[0].message and response.choices[0].message.audio:
+                    ctx.audio_output = response.choices[0].message.audio.data
+                    ctx.audio_id = response.choices[0].message.audio.id
+                    ctx.audio_expires_ts = response.choices[0].message.audio.expires_at
+                    ctx.is_audio = True
+                    output = response.choices[0].message.audio.transcript  # from transcript
 
         ctx.set_output(output, ai_name)
         ctx.set_tokens(

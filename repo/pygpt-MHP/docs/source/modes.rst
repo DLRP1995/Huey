@@ -35,8 +35,14 @@ Plugin allows you to generate images in Chat mode:
    :width: 800
 
 
-Completion
+Chat with Audio
 ---------------
+This mode works like the Chat mode but with native support for audio input and output using a multimodal model - ``gpt-4o-audio``. In this mode, audio input and output are directed to and from the model directly, without the use of external plugins. This enables faster and better audio communication.
+
+More info: https://platform.openai.com/docs/guides/audio/quickstart
+
+Completion
+----------
 This mode provides in-depth access to a broader range of capabilities offered by Large Language Models (LLMs). While it maintains a chat-like interface for user interaction, it introduces additional settings and functional richness beyond typical chat exchanges. Users can leverage this mode to prompt models for complex text completions, role-play dialogues between different characters, perform text analysis, and execute a variety of other sophisticated tasks. It supports any model provided by the OpenAI API as well as other models through ``Langchain``.
 
 Similar to chat mode, on the right-hand side of the interface, there are convenient presets. These allow you to fine-tune instructions and swiftly transition between varied configurations and pre-made prompt templates.
@@ -175,7 +181,7 @@ You can ask for: ``Query the file my_cars.txt about what color my car is.``
 
 And you will receive the response: ``Red``.
 
-Note: this command indexes the file only for the current query and does not persist it in the database. To store queried files also in the standard index you must enable the option "Auto-index readed files" in plugin settings. Remember to enable "Execute commands" checkbox to allow usage of query commands. 
+Note: this command indexes the file only for the current query and does not persist it in the database. To store queried files also in the standard index you must enable the option "Auto-index readed files" in plugin settings. Remember to enable "+ Tools" checkbox to allow usage of query commands. 
 
 **Using Chat with files mode**
 
@@ -240,10 +246,9 @@ Options for indexing existing context history or enabling real-time indexing new
 **WARNING:** remember that when indexing content, API calls to the embedding model are used. Each indexing consumes additional tokens. 
 Always control the number of tokens used on the OpenAI page.
 
-**Tip:** when using ``Chat with files`` you are using additional context from db data and files indexed from ``data`` directory, not the files sending via ``Attachments`` tab. 
-Attachments tab in ``Chat with files`` mode can be used to provide images to ``Vision (inline)`` plugin only.
+**Tip:** Using the Chat with Files mode, you have default access to files manually indexed from the /data directory. However, you can use additional context by attaching a file - such additional context from the attachment does not land in the main index, but only in a temporary one, available only for the given conversation.
 
-**Token limit:** When you use ``Chat with files`` in non-query mode, Llama-index adds extra context to the system prompt. If you use a plugins (which also adds more instructions to system prompt), you might go over the maximum number of tokens allowed. If you get a warning that says you've used too many tokens, turn off plugins you're not using or turn off the "Execute commands" option to reduce the number of tokens used by the system prompt.
+**Token limit:** When you use ``Chat with files`` in non-query mode, Llama-index adds extra context to the system prompt. If you use a plugins (which also adds more instructions to system prompt), you might go over the maximum number of tokens allowed. If you get a warning that says you've used too many tokens, turn off plugins you're not using or turn off the "+ Tools" option to reduce the number of tokens used by the system prompt.
 
 **Available vector stores** (provided by ``Llama-index``):
 
@@ -346,7 +351,7 @@ File: https://github.com/run-llama/llama_index/tree/main/llama-index-integration
 
 Web: https://github.com/run-llama/llama_index/tree/main/llama-index-integrations/readers/llama-index-readers-web
 
-**Tip:** to index an external data or data from the Web just ask for it, by using ``Command: Web Search`` plugin, e.g. you can ask the model with ``Please index the youtube video: URL to video``, etc. Data loader for a specified content will be choosen automatically.
+**Tip:** to index an external data or data from the Web just ask for it, by using ``Web Search`` plugin, e.g. you can ask the model with ``Please index the youtube video: URL to video``, etc. Data loader for a specified content will be choosen automatically.
 
 Allowed additional keyword arguments for built-in data loaders (files):
 

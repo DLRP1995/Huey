@@ -6,7 +6,7 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.20 03:00:00                  #
+# Updated Date: 2024.11.26 04:00:00                  #
 # ================================================== #
 
 import os
@@ -70,7 +70,8 @@ class Body:
         :return: HTML code
         """
         html = ""
-        show_edit = self.window.core.config.get('ctx.edit_icons')
+        show_edit = True
+        # show_edit = self.window.core.config.get('ctx.edit_icons')
         icons_html = "".join(self.get_action_icons(ctx, all=show_edit))
         if icons_html != "":
             extra = "<div class=\"action-icons\" data-id=\"{}\">{}</div>".format(ctx.id, icons_html)
@@ -166,10 +167,12 @@ class Body:
         if num is not None and num_all is not None and num_all > 1:
             num_str = " [{}]".format(num)
         url, path = self.window.core.filesystem.extract_local_url(url)
-        return """<a href="{url}"><img src="{path}" class="image"></a>
-        <p><b>{prefix}{num}:</b> <a href="{url}">{path}</a></p>""". \
+        basename = os.path.basename(path)
+        return """<div class="extra-src-img-box" title="{url}"><div class="img-outer"><div class="img-wrapper"><a href="{url}"><img src="{path}" class="image"></a></div>
+        <a href="{url}" class="title">{title}</a></div></div>""". \
             format(prefix=trans('chat.prefix.img'),
                    url=url,
+                   title=basename,
                    path=path,
                    num=num_str)
 
@@ -182,13 +185,19 @@ class Body:
         :param num_all: number of all URLs
         :return: HTML code
         """
+        icon_path = os.path.join(
+            self.window.core.config.get_app_path(),
+            "data", "icons", "public_filled.svg"
+        )
+        icon = '<img src="file://{}" width="25" height="25" valign="middle" class="extra-src-icon">'.format(icon_path)
         num_str = ""
         if num is not None and num_all is not None and num_all > 1:
             num_str = " [{}]".format(num)
-        return """<b>{prefix}{num}:</b> <a href="{url}" title="{url}">{url}</a>""". \
-            format(prefix=trans('chat.prefix.url'),
-                   url=url,
-                   num=num_str)
+        return """{icon}<b>{num}</b> <a href="{url}" title="{url}">{url}</a>""". \
+            format(url=url,
+                   num=num_str,
+                   icon=icon,
+            )
 
     def get_docs_html(self, docs: list) -> str:
         """
@@ -222,8 +231,16 @@ class Body:
         except Exception as e:
             pass
 
+        icon_path = os.path.join(
+            self.window.core.config.get_app_path(),
+            "data", "icons", "db.svg"
+        )
+        icon = '<img src="file://{}" width="25" height="25" valign="middle" class="extra-src-icon">'.format(icon_path)
         if html_sources != "":
-            html += "<p><small><b>{prefix}:</b></small></p>".format(prefix=trans('chat.prefix.doc'))
+            html += "<p>{icon}<small><b>{prefix}:</b></small></p>".format(
+                prefix=trans('chat.prefix.doc'),
+                icon=icon,
+            )
             html += "<div class=\"cmd\">"
             html += "<p>" + html_sources + "</p>"
             html += "</div> "
@@ -238,15 +255,21 @@ class Body:
         :param num_all: number of all files
         :return: HTML code
         """
+        icon_path = os.path.join(
+            self.window.core.config.get_app_path(),
+            "data", "icons", "attachments.svg"
+        )
+        icon = '<img src="file://{}" width="25" height="25" valign="middle" class="extra-src-icon">'.format(icon_path)
         num_str = ""
         if num is not None and num_all is not None and num_all > 1:
             num_str = " [{}]".format(num)
         url, path = self.window.core.filesystem.extract_local_url(url)
-        return """<div><b>{prefix}{num}:</b> <a href="{url}">{path}</a></div>""". \
-            format(prefix=trans('chat.prefix.file'),
-                   url=url,
+        return """{icon} <b>{num}</b> <a href="{url}">{path}</a>""". \
+            format(url=url,
                    path=path,
-                   num=num_str)
+                   num=num_str,
+                   icon=icon,
+            )
 
     def prepare_tool_extra(self, ctx: CtxItem) -> str:
         """
@@ -268,7 +291,7 @@ class Body:
                     'content': ctx.extra,  # tool output
                 })
                 event.ctx = ctx
-                self.window.core.dispatcher.dispatch(event, all=True)  # handle by plugins
+                self.window.dispatch(event, all=True)  # handle by plugins
                 html += "<div class=\"tool-output-block\">" + event.data['html'] + "</div>"
 
             # multiple tools, list
@@ -283,7 +306,7 @@ class Body:
                         'content': tool,  # tool output[]
                     })
                     event.ctx = ctx
-                    self.window.core.dispatcher.dispatch(event, all=True)
+                    self.window.dispatch(event, all=True)
                     html += "<div class=\"tool-output-block\">" + event.data['html'] + "</div>"
             html += "</div>"
         return html

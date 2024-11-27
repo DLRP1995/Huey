@@ -6,11 +6,14 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.14 01:00:00                  #
+# Updated Date: 2024.11.21 21:00:00                  #
 # ================================================== #
 
-from pygments.styles import get_all_styles
-
+from pygpt_net.core.types import (
+    MODE_AGENT_LLAMA,
+    MODE_LANGCHAIN,
+    MODE_LLAMA_INDEX,
+)
 from pygpt_net.utils import trans
 
 
@@ -104,9 +107,8 @@ class Placeholder:
 
         :return: placeholders list
         """
-        ids = self.window.core.llm.get_ids("langchain")
+        ids = self.window.core.llm.get_ids(MODE_LANGCHAIN)
         data = []
-        data.append({'_': '---'})
         for id in ids:
             data.append({id: id})
         return data
@@ -117,9 +119,8 @@ class Placeholder:
 
         :return: placeholders list
         """
-        ids = self.window.core.llm.get_ids("llama_index")
+        ids = self.window.core.llm.get_ids(MODE_LLAMA_INDEX)
         data = []
-        data.append({'_': '---'})
         for id in ids:
             data.append({id: id})
         return data

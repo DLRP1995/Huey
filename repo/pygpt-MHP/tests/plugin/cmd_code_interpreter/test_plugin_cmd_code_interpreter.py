@@ -6,7 +6,7 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.18 21:00:00                  #
+# Updated Date: 2024.11.25 02:00:00                  #
 # ================================================== #
 
 import os
@@ -26,9 +26,8 @@ def test_options(mock_window):
     assert "python_cmd_tpl" in options
     assert "cmd.code_execute" in options
     assert "cmd.code_execute_file" in options
-    assert "cmd.sys_exec" in options
     assert "sandbox_docker" in options
-    assert "sandbox_docker_image" in options
+    assert "sandbox_ipython" in options
 
 
 def test_handle_cmd_syntax(mock_window):
@@ -44,5 +43,5 @@ def test_handle_cmd_syntax(mock_window):
     }
     event.ctx = ctx
     plugin.handle(event)
-    assert len(event.data["cmd"]) == 9  # code_execute, code_execute_file, sys_exec
+    assert len(event.data["cmd"]) == 7  # code_execute, code_execute_file, sys_exec
 

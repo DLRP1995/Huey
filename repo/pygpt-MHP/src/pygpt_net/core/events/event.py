@@ -6,7 +6,7 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.20 03:00:00                  #
+# Updated Date: 2024.11.26 19:00:00                  #
 # ================================================== #
 
 import json
@@ -27,6 +27,7 @@ class Event(BaseEvent):
     AUDIO_INPUT_TOGGLE = "audio.input.toggle"
     AUDIO_OUTPUT_STOP = "audio.output.stop"
     AUDIO_OUTPUT_TOGGLE = "audio.output.toggle"
+    AUDIO_PLAYBACK = "audio.playback"
     AUDIO_READ_TEXT = "audio.read_text"
     CMD_EXECUTE = "cmd.execute"
     CMD_INLINE = "cmd.inline"
@@ -48,6 +49,7 @@ class Event(BaseEvent):
     PLUGIN_SETTINGS_CHANGED = "plugin.settings.changed"
     PLUGIN_OPTION_GET = "plugin.option.get"
     POST_PROMPT = "post.prompt"
+    POST_PROMPT_ASYNC = "post.prompt.async"
     PRE_PROMPT = "pre.prompt"
     SYSTEM_PROMPT = "system.prompt"
     TOOL_OUTPUT_RENDER = "tool.output.render"
@@ -73,6 +75,8 @@ class Event(BaseEvent):
         self.id = "Event"
         self.name = name
         self.data = data
+        if self.data is None:
+            self.data = {}
         self.ctx = ctx  # CtxItem
         self.stop = False  # True to stop propagation
         self.internal = False

@@ -6,9 +6,20 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.20 03:00:00                  #
+# Updated Date: 2024.11.26 19:00:00                  #
 # ================================================== #
 
+
+from pygpt_net.core.types import (
+    MODE_AGENT,
+    MODE_CHAT,
+    MODE_COMPLETION,
+    MODE_EXPERT,
+    MODE_LANGCHAIN,
+    MODE_LLAMA_INDEX,
+    MODE_VISION,
+    MODE_AUDIO,
+)
 from pygpt_net.core.bridge.context import BridgeContext
 from pygpt_net.core.events import Event, KernelEvent, RenderEvent
 from pygpt_net.item.ctx import CtxItem
@@ -23,7 +34,14 @@ class Experts:
         :param window: Window instance
         """
         self.window = window
-        self.allowed_modes = ["chat", "completion", "vision", "langchain", "llama_index"]
+        self.allowed_modes = [
+            MODE_CHAT,
+            MODE_COMPLETION,
+            MODE_VISION,
+            MODE_LANGCHAIN,
+            MODE_LLAMA_INDEX,
+            MODE_AUDIO,
+        ]
         self.allowed_cmds = ["expert_call"]
 
     def get_mode(self) -> str:
@@ -32,7 +50,7 @@ class Experts:
 
         :return: sub-mode
         """
-        mode = "chat"
+        mode = MODE_CHAT
         current = self.window.core.config.get("experts.mode")
         if current is not None and current in self.allowed_modes:
             mode = current
@@ -44,7 +62,7 @@ class Experts:
 
         :return: True if stopped
         """
-        return self.window.controller.agent.experts.stopped()
+        return self.window.controller.kernel.stopped()
 
     def agent_enabled(self) -> bool:
         """
@@ -52,7 +70,7 @@ class Experts:
 
         :return: True if enabled
         """
-        return self.window.controller.agent.enabled()
+        return self.window.controller.agent.legacy.enabled()
 
     def exists(self, id: str) -> bool:
         """
@@ -61,7 +79,7 @@ class Experts:
         :param id: expert id
         :return: True if exists
         """
-        return self.window.core.presets.has("expert", id)
+        return self.window.core.presets.has(MODE_EXPERT, id)
 
     def get_expert(self, id: str) -> PresetItem:
         """
@@ -70,7 +88,7 @@ class Experts:
         :param id: expert id
         :return: expert item (preset)
         """
-        return self.window.core.presets.get_by_id("expert", id)
+        return self.window.core.presets.get_by_id(MODE_EXPERT, id)
 
     def get_experts(self) -> dict:
         """
@@ -79,11 +97,11 @@ class Experts:
         :return: experts dict
         """
         experts = {}
-        presets = self.window.core.presets.get_by_mode("expert")
+        presets = self.window.core.presets.get_by_mode(MODE_EXPERT)
 
         # mode: agent
         if self.agent_enabled():
-            agents = self.window.core.presets.get_by_mode("agent")
+            agents = self.window.core.presets.get_by_mode(MODE_AGENT)
             agent = self.window.core.config.get('preset')
             if agent is not None:
                 if agent in agents:
@@ -110,7 +128,7 @@ class Experts:
         :return: number of experts
         """
         i = 0
-        agents = self.window.core.presets.get_by_mode("agent")
+        agents = self.window.core.presets.get_by_mode(MODE_AGENT)
         if uuid in agents:
             for expert_uuid in agents[uuid].experts:
                 expert = self.window.core.presets.get_by_uuid(expert_uuid)
@@ -219,14 +237,20 @@ class Experts:
         """
         Re-send response from commands to master expert
 
+        If command has been called by expert then response for command is send here to parent
+
         :param ctx: context item
         """
         if self.stopped():
             return
 
+        # master meta is here, ctx.meta = MASTER META ID here!
+
         # make copy of ctx for reply, and change input name to expert name
         reply_ctx = CtxItem()
         reply_ctx.from_dict(ctx.to_dict())
+
+        # reply ctx has no meta here!!!!
         reply_ctx.input_name = "Expert"
         reply_ctx.output_name = ""
         reply_ctx.sub_call = True  # this flag is not copied in to_dict
@@ -251,7 +275,7 @@ class Experts:
             'context': context,
             'extra': extra,
         })
-        self.window.core.dispatcher.dispatch(event)
+        self.window.dispatch(event)
 
     def call(
             self,
@@ -298,11 +322,11 @@ class Experts:
         stream_mode = self.window.core.config.get('stream')
         db_idx = self.window.controller.idx.current_idx # get idx from agent config
 
-        mode = "expert"  # force expert mode, mode will change in bridge
+        mode = MODE_EXPERT  # force expert mode, mode will change in bridge
 
         # create slave item
         ctx = CtxItem()
-        ctx.meta = slave.meta
+        ctx.meta = slave  # use slave-meta
         ctx.internal = internal
         ctx.hidden = hidden
         ctx.current = True  # mark as current context item
@@ -311,6 +335,7 @@ class Experts:
         ctx.set_input(query, str(ai_name))
         ctx.set_output(None, expert_name)
         ctx.sub_call = True  # mark as sub-call
+        ctx.pid = master_ctx.pid  # copy PID from parent to allow reply
 
         # render: begin
         event = RenderEvent(RenderEvent.BEGIN, {
@@ -318,7 +343,7 @@ class Experts:
             "ctx": ctx,
             "stream": stream_mode,
         })
-        self.window.core.dispatcher.dispatch(event)
+        self.window.dispatch(event)
         self.window.core.ctx.provider.append_item(slave, ctx)  # to slave meta
 
         # build sys prompt
@@ -328,7 +353,7 @@ class Experts:
             'value': sys_prompt,
             'is_expert': True,
         })
-        self.window.core.dispatcher.dispatch(event)
+        self.window.dispatch(event)
         sys_prompt = event.data['value']
         sys_prompt = self.window.core.prompt.prepare_sys_prompt(
             mode,
@@ -352,7 +377,7 @@ class Experts:
             system_prompt=sys_prompt,
             system_prompt_raw=sys_prompt_raw,
             prompt=query,
-            stream=stream_mode,
+            stream=False,
             attachments=files,
             file_ids=file_ids,
             assistant_id=self.window.core.config.get('assistant'),
@@ -363,44 +388,60 @@ class Experts:
             max_tokens=max_tokens,
         )
         self.window.controller.chat.common.lock_input()  # lock input
-        event = KernelEvent(KernelEvent.REQUEST, {
-            'context': bridge_context,
+        event = KernelEvent(KernelEvent.CALL, {
+            'context': bridge_context,  # call using slave ctx history
             'extra': {},
         })
-        self.window.core.dispatcher.dispatch(event)
+        self.window.dispatch(event)
         result = event.data.get("response")
+
         if not result:  # abort if bridge call failed
             return
 
         # handle output
         ctx.current = False  # reset current state
+        ctx.output = result  # store expert output in their context
+        
         self.window.core.ctx.update_item(ctx)
+
         ctx.from_previous()  # append previous result if exists
+
+        # tmp switch meta for render purposes
+        ctx.meta = master_ctx.meta
         self.window.controller.chat.output.handle(
-            ctx,
-            mode,
-            stream_mode,
+            ctx=ctx,
+            mode=mode,
+            stream_mode=False,
         )
         ctx.clear_reply()  # reset results
+        ctx.meta = slave  # restore before cmd execute
+
         self.window.controller.chat.command.handle(ctx)  # handle cmds
         self.window.controller.kernel.stack.handle()  # handle command queue
 
+        # if command to execute then end here, and reply is returned to reply() above from stack, and ctx.reply = TRUE here
+        # 
         ctx.from_previous()  # append previous result again before save
         self.window.core.ctx.update_item(ctx)  # update ctx in DB
 
-        # if commands reply after bridge call, then stop (already handled in dispatcher)
+        # if commands reply after bridge call, then stop (already handled in sync dispatcher)
         if ctx.reply:
             return
 
         # make copy of ctx for reply, and change input name to expert name
         reply_ctx = CtxItem()
+        
         reply_ctx.from_dict(ctx.to_dict())
+        reply_ctx.meta = master_ctx.meta
+
+        # assign expert output
+        reply_ctx.output = result
         reply_ctx.input_name = expert_name
         reply_ctx.output_name = ""
         reply_ctx.cmds = []  # clear cmds
         reply_ctx.sub_call = True  # this flag is not copied in to_dict
 
-        # send slave expert response to master expert
+        # only if no command call, return final result to main
         context = BridgeContext()
         context.ctx = reply_ctx
         context.prompt = "@"+expert_id+" says:\n\n" + str(reply_ctx.output)
@@ -413,7 +454,7 @@ class Experts:
             'context': context,
             'extra': extra,
         })
-        self.window.core.dispatcher.dispatch(event)
+        self.window.dispatch(event)
 
     def get_functions(self) -> list:
         """

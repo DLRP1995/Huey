@@ -6,9 +6,17 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.14 01:00:00                  #
+# Updated Date: 2024.11.26 19:00:00                  #
 # ================================================== #
 
+from pygpt_net.core.types import (
+    MODE_CHAT,
+    MODE_COMPLETION,
+    MODE_LANGCHAIN,
+    MODE_LLAMA_INDEX,
+    MODE_VISION,
+    MODE_AUDIO,
+)
 
 class Legacy:
     def __init__(self, window=None):
@@ -18,7 +26,14 @@ class Legacy:
         :param window: Window instance
         """
         self.window = window
-        self.allowed_modes = ["chat", "completion", "vision", "langchain", "llama_index"]
+        self.allowed_modes = [
+            MODE_CHAT,
+            MODE_COMPLETION,
+            MODE_VISION,
+            MODE_LANGCHAIN,
+            MODE_LLAMA_INDEX,
+            MODE_AUDIO,
+        ]
 
     def get_allowed_modes(self) -> list:
         """
@@ -34,7 +49,7 @@ class Legacy:
 
         :return: sub-mode
         """
-        mode = "chat"
+        mode = MODE_CHAT
         current = self.window.core.config.get("agent.mode")
         if current is not None and current in self.allowed_modes:
             mode = current

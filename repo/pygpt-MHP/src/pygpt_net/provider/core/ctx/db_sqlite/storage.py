@@ -6,7 +6,7 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.08.29 04:00:00                  #
+# Updated Date: 2024.11.26 19:00:00                  #
 # ================================================== #
 
 from datetime import datetime
@@ -377,7 +377,8 @@ class Storage:
                 is_archived = :is_archived,
                 label = :label,
                 root_id = :root_id,
-                parent_id = :parent_id
+                parent_id = :parent_id,
+                additional_ctx_json = :additional_ctx_json
             WHERE id = :id
         """).bindparams(
             id=meta.id,
@@ -400,6 +401,7 @@ class Storage:
             label=int(meta.label),
             root_id=meta.root_id,
             parent_id=meta.parent_id,
+            additional_ctx_json=pack_item_value(meta.additional_ctx),
         )
         with db.begin() as conn:
             conn.execute(stmt)
@@ -616,7 +618,8 @@ class Storage:
                 label,
                 group_id,
                 root_id,
-                parent_id
+                parent_id,
+                additional_ctx_json
             )
             VALUES 
             (
@@ -642,7 +645,8 @@ class Storage:
                 :label,
                 :group_id,
                 :root_id,
-                :parent_id
+                :parent_id,
+                :additional_ctx_json
             )
         """).bindparams(
             uuid=meta.uuid,
@@ -668,6 +672,7 @@ class Storage:
             group_id=meta.group_id,
             root_id=meta.root_id,
             parent_id=meta.parent_id,
+            additional_ctx_json=pack_item_value(meta.additional_ctx),
         )
         with db.begin() as conn:
             result = conn.execute(stmt)
@@ -694,6 +699,8 @@ class Storage:
                 output_name,
                 input_ts,
                 output_ts,
+                hidden_input,
+                hidden_output,
                 mode,
                 model,
                 thread_id,
@@ -705,12 +712,15 @@ class Storage:
                 images_json,
                 files_json,
                 attachments_json,
+                additional_ctx_json,
                 extra,
                 input_tokens,
                 output_tokens,
                 total_tokens,
                 is_internal,
-                docs_json
+                docs_json,
+                audio_id,
+                audio_expires_ts
             )
             VALUES 
             (
@@ -722,6 +732,8 @@ class Storage:
                 :output_name,
                 :input_ts,
                 :output_ts,
+                :hidden_input,
+                :hidden_output,
                 :mode,
                 :model,
                 :thread_id,
@@ -733,12 +745,15 @@ class Storage:
                 :images_json,
                 :files_json,
                 :attachments_json,
+                :additional_ctx_json,
                 :extra,
                 :input_tokens,
                 :output_tokens,
                 :total_tokens,
                 :is_internal,
-                :docs_json
+                :docs_json,
+                :audio_id,
+                :audio_expires_ts
             )
         """).bindparams(
             meta_id=int(meta.id),
@@ -749,6 +764,8 @@ class Storage:
             output_name=item.output_name,
             input_ts=int(item.input_timestamp or 0),
             output_ts=int(item.output_timestamp or 0),
+            hidden_input=item.hidden_input,
+            hidden_output=item.hidden_output,
             mode=item.mode,
             model=item.model,
             thread_id=item.thread,
@@ -760,12 +777,15 @@ class Storage:
             images_json=pack_item_value(item.images),
             files_json=pack_item_value(item.files),
             attachments_json=pack_item_value(item.attachments),
+            additional_ctx_json=pack_item_value(item.additional_ctx),
             extra=pack_item_value(item.extra),
             input_tokens=int(item.input_tokens or 0),
             output_tokens=int(item.output_tokens or 0),
             total_tokens=int(item.total_tokens or 0),
             is_internal=int(item.internal),
             docs_json=pack_item_value(item.doc_ids),
+            audio_id=item.audio_id,
+            audio_expires_ts=int(item.audio_expires_ts or 0)
         )
         with db.begin() as conn:
             result = conn.execute(stmt)
@@ -789,6 +809,8 @@ class Storage:
                 output_name = :output_name,
                 input_ts = :input_ts,
                 output_ts = :output_ts,
+                hidden_input = :hidden_input,
+                hidden_output = :hidden_output,
                 mode = :mode,
                 model = :model,
                 thread_id = :thread_id,
@@ -800,12 +822,15 @@ class Storage:
                 images_json = :images_json,
                 files_json = :files_json,
                 attachments_json = :attachments_json,
+                additional_ctx_json = :additional_ctx_json,
                 extra = :extra,
                 input_tokens = :input_tokens,
                 output_tokens = :output_tokens,
                 total_tokens = :total_tokens,
                 is_internal = :is_internal,
-                docs_json = :docs_json
+                docs_json = :docs_json,
+                audio_id = :audio_id,
+                audio_expires_ts = :audio_expires_ts
             WHERE id = :id
         """).bindparams(
             id=item.id,
@@ -815,6 +840,8 @@ class Storage:
             output_name=item.output_name,
             input_ts=int(item.input_timestamp or 0),
             output_ts=int(item.output_timestamp or 0),
+            hidden_input=item.hidden_input,
+            hidden_output=item.hidden_output,
             mode=item.mode,
             model=item.model,
             thread_id=item.thread,
@@ -826,12 +853,15 @@ class Storage:
             images_json=pack_item_value(item.images),
             files_json=pack_item_value(item.files),
             attachments_json=pack_item_value(item.attachments),
+            additional_ctx_json=pack_item_value(item.additional_ctx),
             extra=pack_item_value(item.extra),
             input_tokens=int(item.input_tokens or 0),
             output_tokens=int(item.output_tokens or 0),
             total_tokens=int(item.total_tokens or 0),
             is_internal=int(item.internal or 0),
             docs_json=pack_item_value(item.doc_ids),
+            audio_id=item.audio_id,
+            audio_expires_ts=int(item.audio_expires_ts or 0)
         )
         with db.begin() as conn:
             conn.execute(stmt)

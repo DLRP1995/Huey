@@ -21,7 +21,7 @@ class Plugin(BasePlugin):
     def __init__(self, *args, **kwargs):
         super(Plugin, self).__init__(*args, **kwargs)
         self.id = "cmd_serial"
-        self.name = "Command: Serial port / USB"
+        self.name = "Serial port / USB"
         self.description = "Provides commands for reading and sending data to USB ports"
         self.prefix = "Serial"
         self.order = 100
@@ -86,6 +86,9 @@ class Plugin(BasePlugin):
 
         if not is_cmd:
             return
+
+        # set state: busy
+        self.cmd_prepare(ctx, my_commands)
 
         try:
             worker = Worker()

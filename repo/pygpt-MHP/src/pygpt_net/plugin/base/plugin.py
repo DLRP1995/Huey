@@ -6,13 +6,16 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.20 03:00:00                  #
+# Updated Date: 2024.11.21 20:00:00                  #
 # ================================================== #
 
 import copy
 
 from PySide6.QtCore import QObject, Slot
 
+from pygpt_net.core.types import (
+    MODE_AGENT_LLAMA,
+)
 from pygpt_net.core.bridge.context import BridgeContext
 from pygpt_net.core.events import Event, KernelEvent
 from pygpt_net.item.ctx import CtxItem
@@ -309,9 +312,21 @@ class BasePlugin(QObject):
         self.debug(msg)
         if self.is_threaded():
             return
-        self.window.ui.status(msg.replace("\n", " "))
+        self.window.update_status(msg.replace("\n", " "))
         if self.is_log():
             print(msg)
+
+    def cmd_prepare(self, ctx: CtxItem, cmds: list):
+        """
+        On command run
+
+        :param ctx: CtxItem
+        :param cmds: commands dict
+        """
+        # set state: busy
+        self.window.dispatch(KernelEvent(KernelEvent.STATE_BUSY, {
+            "id": "img",
+        }))
 
     @Slot(object, object, dict)
     def handle_finished(self, response: dict, ctx: CtxItem = None, extra_data: dict = None):
@@ -336,7 +351,7 @@ class BasePlugin(QObject):
                 'context': context,
                 'extra': extra,
             })
-            self.window.core.dispatcher.dispatch(event)
+            self.window.dispatch(event)
 
     @Slot(object, object, dict)
     def handle_finished_more(self, responses: list, ctx: CtxItem = None, extra_data: dict = None):
@@ -362,7 +377,7 @@ class BasePlugin(QObject):
             'context': context,
             'extra': extra,
         })
-        self.window.core.dispatcher.dispatch(event)
+        self.window.dispatch(event)
 
     def prepare_reply_ctx(self, response: dict, ctx: CtxItem = None) -> dict:
         """
@@ -398,8 +413,8 @@ class BasePlugin(QObject):
             if self.window.core.config.get("ctx.use_extra"):
                 if ctx.extra_ctx is None:
                     ctx.extra_ctx = ""
-                if ctx.extra_ctx == "":
-                    ctx.extra_ctx += "\n"
+                if ctx.extra_ctx != "":
+                    ctx.extra_ctx += "\n\n"
                 ctx.extra_ctx += response["context"]  # allow more context data
                 response["result"] = "OK"
             else:
@@ -416,7 +431,7 @@ class BasePlugin(QObject):
         """
         if self.is_threaded():
             return
-        self.window.ui.status(str(data))
+        self.window.update_status(str(data))
 
     @Slot(object)
     def handle_error(self, err: any):
@@ -453,6 +468,4 @@ class BasePlugin(QObject):
 
         :return: True if threaded
         """
-        if self.window.core.config.get("mode") == "agent_llama":
-            return True
-        return False
+        return self.window.controller.kernel.is_threaded()

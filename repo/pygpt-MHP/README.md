@@ -2,7 +2,7 @@
 
 [![pygpt](https://snapcraft.io/pygpt/badge.svg)](https://snapcraft.io/pygpt)
 
-Release: **2.4.17** | build: **2024.11.20** | Python: **>=3.10, <3.12**
+Release: **2.4.34** | build: **2024.11.26** | Python: **>=3.10, <3.12**
 
 > Official website: https://pygpt.net | Documentation: https://pygpt.readthedocs.io
 > 
@@ -155,11 +155,11 @@ pip install pygpt-net
 pygpt
 ```
 
-## Source Code
+## Running from GitHub source code
 
 An alternative method is to download the source code from `GitHub` and execute the application using the Python interpreter (>=3.10, <3.12). 
 
-### Running from GitHub source code
+### Install with pip
 
 1. Clone git repository or download .zip file:
 
@@ -187,7 +187,7 @@ pip install -r requirements.txt
 python3 run.py
 ```
 
-**Install with Poetry**
+### Install with Poetry
 
 1. Clone git repository or download .zip file:
 
@@ -356,7 +356,7 @@ This mode in **PyGPT** mirrors `ChatGPT`, allowing you to chat with models such 
 
 The main part of the interface is a chat window where conversations appear. Right below that is where you type your messages. On the right side of the screen, there's a section to set up or change your system prompts. You can also save these setups as presets to quickly switch between different models or tasks.
 
-Above where you type your messages, the interface shows you the number of tokens your message will use up as you type it – this helps to keep track of usage. There's also a feature to upload files in this area. Go to the `Files` tab to manage your uploads or add attachments to send to the OpenAI API (but this makes effect only in `Assisant` and `Vision` modes).
+Above where you type your messages, the interface shows you the number of tokens your message will use up as you type it – this helps to keep track of usage. There's also a feature to upload files in this area. Go to the `Attachments` tab to manage your uploads or add attachments to send to the OpenAI API (but this makes effect only in `Assisant` and `Vision` modes).
 
 ![v2_mode_chat](https://github.com/szczyglis-dev/py-gpt/assets/61396542/f573ee22-8539-4259-b180-f97e54bc0d94)
 
@@ -373,6 +373,17 @@ With this plugin, you can capture an image with your camera or attach an image a
 Plugin allows you to generate images in Chat mode:
 
 ![v3_img_chat](https://github.com/szczyglis-dev/py-gpt/assets/61396542/c288a4b3-c932-4201-b5a3-8452aea49817)
+
+
+## Chat with Audio
+
+2024-11-26: currently in beta.
+
+This mode works like the Chat mode but with native support for audio input and output using a multimodal model - `gpt-4o-audio`. In this mode, audio input and output are directed to and from the model directly, without the use of external plugins. This enables faster and better audio communication.
+
+More info: https://platform.openai.com/docs/guides/audio/quickstart
+
+**INFO:** The execution of commands and tools in this mode is temporarily unavailable.
 
 ## Completion
 
@@ -491,7 +502,7 @@ You can ask for: `Query the file my_cars.txt about what color my car is.`
 
 And you will receive the response: `Red`.
 
-Note: this command indexes the file only for the current query and does not persist it in the database. To store queried files also in the standard index you must enable the option "Auto-index readed files" in plugin settings. Remember to enable "Execute commands" checkbox to allow usage of query commands. 
+Note: this command indexes the file only for the current query and does not persist it in the database. To store queried files also in the standard index you must enable the option "Auto-index readed files" in plugin settings. Remember to enable "+ Tools" checkbox to allow usage of query commands. 
 
 **Using Chat with files mode**
 
@@ -561,10 +572,9 @@ Options for indexing existing context history or enabling real-time indexing new
 
 **WARNING:** remember that when indexing content, API calls to the embedding model are used. Each indexing consumes additional tokens. Always control the number of tokens used on the OpenAI page.
 
-**Tip:** when using `Chat with files` you are using additional context from db data and files indexed from `data` directory, not the files sending via `Attachments` tab. 
-Attachments tab in `Chat with files` mode can be used to provide images to `Vision (inline)` plugin only.
+**Tip:** Using the Chat with Files mode, you have default access to files manually indexed from the /data directory. However, you can use additional context by attaching a file - such additional context from the attachment does not land in the main index, but only in a temporary one, available only for the given conversation.
 
-**Token limit:** When you use `Chat with files` in non-query mode, Llama-index adds extra context to the system prompt. If you use a plugins (which also adds more instructions to system prompt), you might go over the maximum number of tokens allowed. If you get a warning that says you've used too many tokens, turn off plugins you're not using or turn off the "Execute commands" option to reduce the number of tokens used by the system prompt.
+**Token limit:** When you use `Chat with files` in non-query mode, Llama-index adds extra context to the system prompt. If you use a plugins (which also adds more instructions to system prompt), you might go over the maximum number of tokens allowed. If you get a warning that says you've used too many tokens, turn off plugins you're not using or turn off the "+ Tools" option to reduce the number of tokens used by the system prompt.
 
 **Available vector stores** (provided by `Llama-index`):
 
@@ -665,7 +675,7 @@ File: https://github.com/run-llama/llama_index/tree/main/llama-index-integration
 
 Web: https://github.com/run-llama/llama_index/tree/main/llama-index-integrations/readers/llama-index-readers-web
 
-**Tip:** to index an external data or data from the Web just ask for it, by using `Command: Web Search` plugin, e.g. you can ask the model with `Please index the youtube video: URL to video`, etc. Data loader for a specified content will be choosen automatically.
+**Tip:** to index an external data or data from the Web just ask for it, by using `Web Search` plugin, e.g. you can ask the model with `Please index the youtube video: URL to video`, etc. Data loader for a specified content will be choosen automatically.
 
 Allowed additional keyword arguments for built-in data loaders (files):
 
@@ -1052,17 +1062,55 @@ Use voice synthesis to describe events on the screen.
 ![v2_access](https://github.com/szczyglis-dev/py-gpt/assets/61396542/02dd161b-6fb1-48f9-9217-40c658888833)
 
 
-# Files and attachments
+# Attachments and files
 
 ## Input attachments (upload)
 
-**PyGPT** makes it simple for users to upload files to the server and send them to the model for tasks like analysis, similar to attaching files in `ChatGPT`. There's a separate `Files` tab next to the text input area specifically for managing file uploads. Users can opt to have files automatically deleted after each upload or keep them on the list for repeated use.
+**PyGPT** makes it simple for users to upload files to the server and send them to the model for tasks like analysis, similar to attaching files in `ChatGPT`. There's a separate `Attachments` tab next to the text input area specifically for managing file uploads. Users can opt to have files automatically deleted after each upload or keep them on the list for repeated use.
 
 ![v2_file_input](https://github.com/szczyglis-dev/py-gpt/assets/61396542/bd3d9840-2bc4-4ba8-a603-69724f9eb620)
 
-The attachment feature is available in both the `Assistant` and `Vision` modes at default.
-In `Assistant` mode, you can send documents and files to analyze, while in `Vision` mode, you can send images.
-In other modes, you can enable attachments by activating the `Vision (inline)` plugin (for providing images only).
+You can use attachments to provide additional context to the conversation. Uploaded files will be converted into text using loaders from Llama-index. You can upload any file format supported by the application through Llama-index. Supported formats include:
+
+Text-based types:
+
+- CSV files (csv)
+- Epub files (epub)
+- Excel .xlsx spreadsheets (xlsx)
+- HTML files (html, htm)
+- IPYNB Notebook files (ipynb)
+- JSON files (json)
+- Markdown files (md)
+- PDF documents (pdf)
+- Plain-text files (txt and etc.)
+- Word .docx documents (docx)
+- XML files (xml)
+
+Media-types:
+
+- Image (using vision) (jpg, jpeg, png, gif, bmp, tiff, webp)
+- Video/audio (mp4, avi, mov, mkv, webm, mp3, mpeg, mpga, m4a, wav)
+
+Archives:
+
+- zip
+- tar, tar.gz, tar.bz2
+
+**Note:** To use images as additional context, you must enable the option in settings: `Files and attachments -> Allow images as additional context`. Otherwise, only normal vision/handling by the vision model will be active for images.
+
+The content from the uploaded attachments will be used in the current conversation and will be available throughout (per context). There are 3 modes available for working with additional context from attachments:
+
+- `Full context`: Provides best results. This mode attaches the entire content of the read file to the user's prompt. This process happens in the background and may require a large number of tokens if you uploaded extensive content.
+
+- `Query only`: The indexed attachment will only be queried in real-time using Llama-index. This operation does not require any additional tokens, but it may not provide access to the full content of the file 1:1.
+
+- `Summary`: When queried, an additional query will be generated in the background and executed by a separate model to summarize the content of the attachment and return the required information to the main model. You can change the model used for summarization in the settings under the `Files and attachments` section.
+
+**Note:** Only text files from the list above are included in the additional context. Images will not be included in the context but will be used by the vision model in real-time. Adding image files to the context will be available in future versions.
+
+**Uploading larger files and auto-index:**
+
+To use the `Query only` mode, the file must be indexed in the vector database. This occurs automatically at the time of upload if the `Auto-index on upload` option in the `Attachments` tab is enabled. When uploading large files, such indexing might take a while - therefore, if you are using the `Full context` option, which does not use the index, you can disable the `Auto-index` option to speed up the upload of the attachment. In this case, it will only be indexed when the `Query only` option is called for the first time, and until then, attachment will be available in the form of `Full context` and `Summary`.
 
 ## Files (download, code generation)
 
@@ -1070,11 +1118,11 @@ In other modes, you can enable attachments by activating the `Vision (inline)` p
 
 This `data` directory is also where the application stores files that are generated locally by the AI, such as code files or any other data requested from the model. Users have the option to execute code directly from the stored files and read their contents, with the results fed back to the AI. This hands-off process is managed by the built-in plugin system and model-triggered commands. You can also indexing files from this directory (using integrated `Llama-index`) and use it's contents as additional context provided to discussion.
 
-The `Command: Files I/O` plugin takes care of file operations in the `data` directory, while the `Command: Code Interpreter` plugin allows for the execution of code from these files.
+The `Files I/O` plugin takes care of file operations in the `data` directory, while the `Code Interpreter` plugin allows for the execution of code from these files.
 
 ![v2_file_output](https://github.com/szczyglis-dev/py-gpt/assets/61396542/2ada219d-68c9-45e3-96af-86ac5bc73593)
 
-To allow the model to manage files or python code execution, the `Execute commands` option must be active, along with the above-mentioned plugins:
+To allow the model to manage files or python code execution, the `+ Tools` option must be active, along with the above-mentioned plugins:
 
 ![v2_code_execute](https://github.com/szczyglis-dev/py-gpt/assets/61396542/d5181eeb-6ab4-426f-93f0-037d256cb078)
 
@@ -1519,30 +1567,32 @@ The following plugins are currently available, and model can use them instantly:
 
 - `Chat with files (Llama-index, inline)` - plugin integrates `Llama-index` storage in any chat and provides additional knowledge into context (from indexed files and previous context from database).
 
-- `Command: API calls` - plugin lets you connect the model to the external services using custom defined API calls.
+- `API calls` - plugin lets you connect the model to the external services using custom defined API calls.
 
-- `Command: Code Interpreter` - responsible for generating and executing Python code, functioning much like 
+- `Code Interpreter` - responsible for generating and executing Python code, functioning much like 
 the Code Interpreter on ChatGPT, but locally. This means GPT can interface with any script, application, or code. 
 The plugin can also execute system commands, allowing GPT to integrate with your operating system. 
 Plugins can work in conjunction to perform sequential tasks; for example, the `Files` plugin can write generated 
 Python code to a file, which the `Code Interpreter` can execute it and return its result to GPT.
 
-- `Command: Custom Commands` - allows you to create and execute custom commands on your system.
+- `Custom Commands` - allows you to create and execute custom commands on your system.
 
-- `Command: Files I/O` - provides access to the local filesystem, enabling GPT to read and write files, 
+- `Files I/O` - provides access to the local filesystem, enabling GPT to read and write files, 
 as well as list and create directories.
 
-- `Command: Mouse and Keyboard` - provides the ability to control the mouse and keyboard by the model.
+- `System (OS)` - allows you to create and execute custom commands on your system.
 
-- `Command: Web Search` - provides the ability to connect to the Web, search web pages for current data, and index external content using Llama-index data loaders.
+- `Mouse and Keyboard` - provides the ability to control the mouse and keyboard by the model.
 
-- `Command: Serial port / USB` - plugin provides commands for reading and sending data to USB ports.
+- `Web Search` - provides the ability to connect to the Web, search web pages for current data, and index external content using Llama-index data loaders.
+
+- `Serial port / USB` - plugin provides commands for reading and sending data to USB ports.
 
 - `Context history (calendar, inline)` - provides access to context history database.
 
 - `Crontab / Task scheduler` - plugin provides cron-based job scheduling - you can schedule tasks/prompts to be sent at any time using cron-based syntax for task setup.
 
-- `DALL-E 3: Image Generation (inline)` - integrates DALL-E 3 image generation with any chat and mode. Just enable and ask for image in Chat mode, using standard model like GPT-4. The plugin does not require the `Execute commands` option to be enabled.
+- `DALL-E 3: Image Generation (inline)` - integrates DALL-E 3 image generation with any chat and mode. Just enable and ask for image in Chat mode, using standard model like GPT-4. The plugin does not require the `+ Tools` option to be enabled.
 
 - `Experts (inline)` - allows calling experts in any chat mode. This is the inline Experts (co-op) mode.
 
@@ -1881,11 +1931,11 @@ Model used for querying `Llama-index`. *Default:* `gpt-3.5-turbo`
 Indexes to use. If you want to use multiple indexes at once then separate them by comma. *Default:* `base`
 
 
-## Command: API calls
+## API calls
 
 **PyGPT** lets you connect the model to the external services using custom defined API calls.
 
-To activate this feature, turn on the `Command: API calls` plugin found in the `Plugins` menu.
+To activate this feature, turn on the `API calls` plugin found in the `Plugins` menu.
 
 In this plugin you can provide list of allowed API calls, their parameters and request types. The model will replace provided placeholders with required params and make API call to external service.
 
@@ -1938,13 +1988,13 @@ Connection timeout (seconds). *Default:* `5`
 User agent to use when making requests. *Default:* `Mozilla/5.0`
 
 
-## Command: Code Interpreter
+## Code Interpreter
 
 ### Executing Code
 
 From version `2.4.13` with built-in `IPython`.
 
-The plugin operates similarly to the `Code Interpreter` in `ChatGPT`, with the key difference that it works locally on the user's system. It allows for the execution of any Python code on the computer that the model may generate. When combined with the `Command: Files I/O` plugin, it facilitates running code from files saved in the `data` directory. You can also prepare your own code files and enable the model to use them or add your own plugin for this purpose. You can execute commands and code on the host machine or in Docker container.
+The plugin operates similarly to the `Code Interpreter` in `ChatGPT`, with the key difference that it works locally on the user's system. It allows for the execution of any Python code on the computer that the model may generate. When combined with the `Files I/O` plugin, it facilitates running code from files saved in the `data` directory. You can also prepare your own code files and enable the model to use them or add your own plugin for this purpose. You can execute commands and code on the host machine or in Docker container.
 
 **IPython:** Starting from version `2.4.13`, it is highly recommended to adopt the new option: `IPython`, which offers significant improvements over previous workflows. IPython provides a robust environment for executing code within a kernel, allowing you to maintain the state of your session by preserving the results of previous commands. This feature is particularly useful for iterative development and data analysis, as it enables you to build upon prior computations without starting from scratch. Moreover, IPython supports the use of magic commands, such as `!pip install <package_name>`, which facilitate the installation of new packages directly within the session. This capability streamlines the process of managing dependencies and enhances the flexibility of your development environment. Overall, IPython offers a more efficient and user-friendly experience for executing and managing code.
 
@@ -1974,7 +2024,7 @@ sudo snap connect pygpt:docker docker:docker-daemon
 Another feature is the ability to execute system commands and return their results. With this functionality, the plugin can run any system command, retrieve the output, and then feed the result back to the model. When used with other features, this provides extensive integration capabilities with the system.
 
 
-**Tip:** always remember to enable the `Execute commands` option to allow execute commands from the plugins.
+**Tip:** always remember to enable the `+ Tools` option to allow execute commands from the plugins.
 
 
 **Options:**
@@ -2053,14 +2103,9 @@ Default: 5559
 
 Allows Python code execution in IPython interpreter (in current kernel). *Default:* `True`
 
-- `Enable: ipython_execute_new` *cmd.ipython_execute_new*
-
-Allows Python code execution in IPython interpreter (in new kernel). *Default:* `True`
-
 - `Enable: python_kernel_restart` *cmd.ipython_kernel_restart*
 
 Allows to restart IPython kernel. *Default:* `True`
-
 
 
 **Python (legacy)**
@@ -2102,7 +2147,7 @@ Docker image to use for sandbox *Default:* `python:3.8-alpine`
 
 
 
-## Command: Custom Commands
+## Custom Commands
 
 With the `Custom Commands` plugin, you can integrate **PyGPT** with your operating system and scripts or applications. You can define an unlimited number of custom commands and instruct GPT on when and how to execute them. Configuration is straightforward, and **PyGPT** includes a simple tutorial command for testing and learning how it works:
 
@@ -2164,7 +2209,7 @@ With the setup above, every time you ask GPT to generate a song for you and save
 
 ![v2_custom_cmd_example](https://github.com/szczyglis-dev/py-gpt/assets/61396542/97cbc5b9-0dd9-487e-9182-d9873dea42ab)
 
-## Command: Files I/O
+## Files I/O
 
 The plugin allows for file management within the local filesystem. It enables the model to create, read, write and query files located in the `data` directory, which can be found in the user's work directory. With this plugin, the AI can also generate Python code files and thereafter execute that code within the user's system.
 
@@ -2298,7 +2343,7 @@ If enabled, every time file is read, it will be automatically indexed (persisten
 If enabled, file will be indexed without return its content on file read (persistent index). *Default:* `False`
 
 
-## Command: Mouse And Keyboard
+## Mouse And Keyboard
 
 Introduced in version: `2.4.4` (2024-11-09)
 
@@ -2315,7 +2360,7 @@ Plugin capabilities include:
 - Control the keyboard (pressing keys, typing text)
 - Making screenshots
 
-The `Execute commands` option must be enabled to use this plugin.
+The `+ Tools` option must be enabled to use this plugin.
 
 **Options:**
 
@@ -2378,11 +2423,11 @@ Allows `keyboard_key` command execution. *Default:* `True`
 Allows `keyboard_type` command execution. *Default:* `True`
 
 
-## Command: Web Search
+## Web Search
 
 **PyGPT** lets you connect GPT to the internet and carry out web searches in real time as you make queries.
 
-To activate this feature, turn on the `Command: Web Search` plugin found in the `Plugins` menu.
+To activate this feature, turn on the `Web Search` plugin found in the `Plugins` menu.
 
 Web searches are provided by `Google Custom Search Engine` and `Microsoft Bing` APIs and can be extended with other search engine providers. 
 
@@ -2513,7 +2558,7 @@ Prompt used for web search results summarize, use {query} as a placeholder for s
 
 Prompt used for specified URL page summarize.
 
-## Command: Serial port / USB
+## Serial port / USB
 
 Provides commands for reading and sending data to USB ports.
 
@@ -2689,7 +2734,7 @@ If enabled, then a tray notification will be shown on every run of the job. *Def
 
 ## DALL-E 3: Image Generation (inline)
 
-The plugin integrates `DALL-E 3` image generation with any chat mode. Simply enable it and request an image in Chat mode, using a standard model such as `GPT-4`. The plugin does not require the `Execute commands` option to be enabled.
+The plugin integrates `DALL-E 3` image generation with any chat mode. Simply enable it and request an image in Chat mode, using a standard model such as `GPT-4`. The plugin does not require the `+ Tools` option to be enabled.
 
 **Options**
 
@@ -2725,11 +2770,11 @@ Replace whole system prompt with vision prompt against appending it to the curre
 
 - `Enable: capturing images from camera` *cmd.camera_capture*
 
-Allows `capture` command execution. If enabled, model will be able to capture images from camera itself. The `Execute commands` option must be enabled. *Default:* `False`
+Allows `capture` command execution. If enabled, model will be able to capture images from camera itself. The `+ Tools` option must be enabled. *Default:* `False`
 
 - `Enable: making screenshots` *cmd.make_screenshot*
 
-Allows `screenshot` command execution. If enabled, model will be able to making screenshots itself. The `Execute commands` option must be enabled. *Default:* `False`
+Allows `screenshot` command execution. If enabled, model will be able to making screenshots itself. The `+ Tools` option must be enabled. *Default:* `False`
 
 ## Real Time
 
@@ -3005,11 +3050,11 @@ In background, **PyGPT** uses an internal syntax to define commands and their pa
 
 It is a JSON object wrapped between `~###~`. The application extracts the JSON object from such formatted text and executes the appropriate function based on the provided parameters and command name. Many of these types of commands are defined in plugins (e.g., those used for file operations or internet searches). You can also define your own commands using the `Custom Commands` plugin, or simply by creating your own plugin and adding it to the application.
 
-**Tip:** The `Execute commands` option checkbox must be enabled to allow the execution of commands from plugins. Disable the option if you do not want to use commands, to prevent additional token usage (as the command execution system prompt consumes additional tokens).
+**Tip:** The `+ Tools` option checkbox must be enabled to allow the execution of commands from plugins. Disable the option if you do not want to use commands, to prevent additional token usage (as the command execution system prompt consumes additional tokens).
 
 ![v2_code_execute](https://github.com/szczyglis-dev/py-gpt/assets/61396542/d5181eeb-6ab4-426f-93f0-037d256cb078)
 
-When native API function calls are disabled, a special system prompt responsible for invoking commands is added to the main system prompt if the `Execute commands` option is active.
+When native API function calls are disabled, a special system prompt responsible for invoking commands is added to the main system prompt if the `+ Tools` option is active.
 
 However, there is an additional possibility to define your own commands and execute them with the help of GPT.
 These are functions - defined on the OpenAI API side and described using JSON objects. You can find a complete guide on how to define functions here:
@@ -3060,7 +3105,7 @@ Then, in the `Custom Commands` plugin, create a new command with the same name a
 
 **Command to execute:** `echo "OK. Email sent: {quote}"`
 
-At next, enable the `Execute commands` option and enable the plugin.
+At next, enable the `+ Tools` option and enable the plugin.
 
 Ask GPT in Chat mode:
 
@@ -3608,13 +3653,6 @@ You can also manualy enable legacy mode by editing config file - open the `%WORK
 
 To get the new version, simply download it and start using it in place of the old one. All your custom settings like configuration, presets, indexes, and past conversations will be kept and ready to use right away in the new version.
 
-
-## Coming soon
-
-- Enhanced integration with Langchain
-- More vector databases support
-- Development of autonomous agents
-
 ## DISCLAIMER
 
 This application is not officially associated with OpenAI. The author shall not be held liable for any damages 
@@ -3631,46 +3669,104 @@ may consume additional tokens that are not displayed in the main window.
 
 ## Recent changes:
 
-**2.4.17 (2024-11-20)**
+**2.4.34 (2024-11-26)**
 
-- Refactored kernel and render events.
-- Added multiple formatted extra outputs from plugins.
-- Added a 'Reset (clear)' option in the context list for clearing the current context.
-- Improved agents steps output handling.
-- Fixed the audio button.
-- Improved the stop event.
-- Other small fixes.
+- Added a new mode: `Chat with Audio`, with built-in multimodal support for audio input/output. Currently in `beta`, the execution of commands and tools in this mode is temporarily unavailable.
+- Added new models: `gpt-4o-audio-preview`, `gpt-4o-2024-11-20`, `chatgpt-4o-latest`.
+- Force disabled integration with the native system menu.
 
-**2.4.16 (2024-11-19)**
+**2.4.33 (2024-11-26)**
 
-- Code Interpreter and Files I/O input/output is now displayed in chat window, using syntax highlight.
-- Refactored plugins structure.
-- Fix: command execution in Chat in Files mode when no index is selected.
-- Fix: missing translations in Agent mode.
+- Improved CSS and rendering of file and image lists.
+- Added displaying of used attachments in the chat window.
 
+**2.4.32 (2024-11-26)**
 
-**2.4.15 (2024-11-18)**
+- The "Add URL" option added to the "Attachments" tab allows users to include content from a given website as additional context. Currently, it only supports standard web pages and video transcription for YouTube links. More "web" options will be added in the future.
+- Added UTF-8 as default in attachments content text read/write.
 
-- Vision analysis added to all modes.
-- Added commands for the Vision plugin: image analysis from an attachment, screenshot analysis, camera image analysis - performed in the background in every mode, without switching to vision mode.
-- Improved execution of multiple commands at once..
-- Improved integration with IPython and extended instructions for the model.
-- Other fixes and improvements.
+**2.4.31 (2024-11-25)**
 
-**2.4.14 (2024-11-17)**
+- Added an option checkbox `Auto-index on upload` in the `Attachments` tab: 
 
-- Added a `Loop / evaluate` mode for Llama-index agents, allowing them to work autonomously in a loop and evaluates the correctness of received results using a percentage scale from 0% to 100%, and automatically continue and correct responses below expected value.
-- Updated layout: mode and model lists replaced with comboboxes.
+**Tip:** To use the `Query only` mode, the file must be indexed in the vector database. This occurs automatically at the time of upload if the `Auto-index on upload` option in the `Attachments` tab is enabled. When uploading large files, such indexing might take a while - therefore, if you are using the `Full context` option, which does not use the index, you can disable the `Auto-index` option to speed up the upload of the attachment. In this case, it will only be indexed when the `Query only` option is called for the first time, and until then, attachment will be available in the form of `Full context` and `Summary`.
 
-**2.4.13 (2024-11-16)**
+- Added context menu options in `Uploaded attachments` tab: `Open`, `Open Source directory` and `Open Storage directory`.
 
-- Introduced `Code Interpreter (v2)` with `IPython`: Enables session state retention on a kernel and building on previous computations, allowing for a Jupyter-like workflow, which is useful for iterative development and data analysis. Supports magic commands like `!pip install <package_name>` for package installation within the session. (currently in beta)
+**2.4.30 (2024-11-25)**
 
-**2.4.12 (2024-11-15)**
+- Added instruction to model about mapped data directory in both legacy and IPython code interepreter.
+- Updated locales for plugins.
 
-- Added httpx-socks to the dependencies, enabling the use of SOCKS proxies.
+**2.4.29 (2024-11-25)**
 
-**2.4.11 (2024-11-15)**
+- Added a local IPython interpreter - you can now choose between local and sandbox (Docker) in the plugin settings.
+- Added the ability to configure mapped volumes and ports for Docker containers in the plugin settings.
+- Optimized and speed-up the Llama-index plugin (inline).
+- Checkboxes replaced with Toggle buttons.
+- Improved settings dialogs.
+- Slight modification of the layout.
+- Fix: Dockerfile formatting in Code Interpreter config.
+- Fix: experts inline plugin execution.
+
+**2.4.28 (2024-11-24)**
+
+- Fix: issue #78
+
+**2.4.27 (2024-11-24)**
+
+- Profile switch fix.
+
+**2.4.26 (2024-11-24)**
+
+- Fix: issue #77
+
+**2.4.25 (2024-11-24)**
+
+- Added new plugin: System (OS), with optional sandbox support.
+- Execution of system commands moved to the System plugin.
+- Improved sandbox/Docker management.
+- Enhanced plugin settings.
+- Commands renamed to Tools, simplified layout.
+- Fix: handling of the Mouse and Keyboard plugin.
+- Fix: switching to a new context from a non-chat tab.
+- Fix: camera screenshots when the camera is not started.
+
+**2.4.24 (2024-11-23)**
+
+- Added the ability to use ZIP and TAR archives as attachments (they are now unpacked "on the fly").
+- Added the ability to index ZIP and TAR archives (it may be necessary to remove .zip and .tar from the blacklist in the settings).
+- Fix: error when uploading to the /data directory using the Upload files button.
+
+**2.4.23 (2024-11-23)**
+
+- Condensed layout widgets margins.
+- Added filename info to provided additional context from attachments.
+- Fixed auto-clear in attachments in Assistants mode.
+
+**2.4.22 (2024-11-23)**
+
+- Added the ability to use attachments with images, audio, and video as additional context. Tip: to enable the use of images as additional context, you need to enable the option: `Files and attachments -> Allow images as additional context`.
+- Edit icons in the chat window are enabled by default.
+
+**2.4.21 (2024-11-23)**
+
+- Added the ability to send additional context from attachments without needing to activate the "Chat with Files" mode. Now, you just need to attach a file, and the additional context from the file will be available in the conversation. More information can be found in the "Files and attachments" section of the documentation.
+
+- Fixed the issue with restarting the agent after it has been forcefully stopped.
+
+**2.4.20 (2024-11-22)**
+
+- Fixed freeze in Windows installer. #75
+- Small fixes.
+
+**2.4.19 (2024-11-22)**
+
+- Added new LLM providers for Llama-index: HuggingFaceAPI and LocalAI.
+- The IPython interpreter now returns local paths to generated files and images (mapped to: %workdir%/ipython/).
+- Refactored legacy Agent and Expert modes.
+- Fixed Expert mode initialization.
+- Added an option in Settings -> Layout to disable animations.
 
 
 # Credits and links

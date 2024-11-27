@@ -6,7 +6,7 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.17 17:00:00                  #
+# Updated Date: 2024.11.26 04:00:00                  #
 # ================================================== #
 
 import datetime
@@ -20,6 +20,7 @@ from llama_index.core.indices.base import BaseIndex
 from llama_index.core.schema import Document
 from llama_index.core import SimpleDirectoryReader
 
+from pygpt_net.item.model import ModelItem
 from pygpt_net.provider.loaders.base import BaseLoader
 from pygpt_net.utils import parse_args, pack_arg
 
@@ -261,15 +262,23 @@ class Indexing:
             return False
         return True
 
-    def get_documents(self, path: str, force: bool = False, silent: bool = False) -> list[Document]:
+    def get_documents(
+            self,
+            path: str,
+            force: bool = False,
+            silent: bool = False,
+            loader_kwargs: dict = None,
+    ) -> list[Document]:
         """
-        Get documents from path
+        Get documents from path using data loaders
 
         :param path: path to data
         :param force: force reading
         :param silent: disable logging
+        :param loader_kwargs: additional keyword arguments for loader
         :return: list of documents
         """
+        # TODO: if .zip then unpack here, and return path to /tmp
         if not silent:
             self.window.core.idx.log("Reading documents from path: {}".format(path))
         if os.path.isdir(path):
@@ -295,11 +304,22 @@ class Indexing:
                     self.window.core.idx.log("Ignoring excluded path: {}".format(path))
                 return []
 
+            # check if archive (zip, tar)
+            if self.window.core.filesystem.packer.is_archive(path):
+                tmp_path = self.window.core.filesystem.packer.unpack(path)
+                if tmp_path:
+                    return self.get_documents(tmp_path, force=force, silent=silent, loader_kwargs=loader_kwargs)
+
             if ext in self.loaders["file"]:
                 if not silent:
                     self.window.core.idx.log("Using loader for: {}".format(ext))
                 reader = self.loaders["file"][ext]
-                documents = reader.load_data(file=Path(path))
+
+                # use custom loader method if available
+                if hasattr(reader, "load_data_custom") and loader_kwargs:
+                    documents = reader.load_data_custom(file=Path(path), **loader_kwargs)
+                else:
+                    documents = reader.load_data(file=Path(path))
             else:
                 if not silent:
                     self.window.core.idx.log("Using default SimpleDirectoryReader for: {}".format(ext))
@@ -310,18 +330,83 @@ class Indexing:
         self.window.core.idx.metadata.append_file_metadata(documents, path)
         return documents
 
-    def read_text_content(self, path: str) -> str:
+    def read_text_content(self, path: str, loader_kwargs: dict = None) -> str:
         """
         Get content from file using loaders
 
         :param path: path to file
+        :param loader_kwargs: additional keyword arguments for data loader
         :return: file content
         """
-        docs = self.get_documents(path, force=True, silent=True)
+        docs = self.get_documents(
+            path,
+            force=True,  # allow excluded extensions
+            silent=True,
+            loader_kwargs=loader_kwargs,
+        )
         data = []
         for doc in docs:
             data.append(doc.text)
         return "\n".join(data)
+
+    def read_web_content(
+            self,
+            url: str,
+            type: str = "webpage",
+            extra_args: dict = None
+    ) -> str:
+        """
+        Get content from external resource
+
+        :param url: external url to index
+        :param type: type of URL (webpage, feed, etc.)
+        :param extra_args: extra arguments for loader
+        :return: file content
+        """
+        docs = self.read_web(url, type, extra_args)
+        data = []
+        for doc in docs:
+            data.append(doc.text)
+        return "\n".join(data)
+
+    def read_web(
+            self,
+            url: str,
+            type: str = "webpage",
+            extra_args: dict = None,
+    ) -> list[Document]:
+        """
+        Read data from external resource
+
+        :param url: external url to index
+        :param type: type of URL (webpage, feed, etc.)
+        :param extra_args: extra arguments for loader
+        :return: list of documents
+        """
+        documents = []
+
+        # check if web loader for defined type exists
+        if type not in self.loaders["web"]:
+            raise ValueError("No web loader for type: {}".format(type))
+
+        try:
+            if "url" not in extra_args:
+                extra_args["url"] = url
+
+            # get unique external content identifier
+            unique_id = self.data_providers[type].get_external_id(extra_args)
+            self.window.core.idx.log("Loading web documents from: {}".format(unique_id))
+            self.window.core.idx.log("Using web loader for type: {}".format(type))
+
+            args = self.data_providers[type].prepare_args(**extra_args)
+
+            # get documents from external resource
+            documents = self.loaders["web"][type].load_data(
+                **args
+            )
+        except Exception as e:
+            self.window.core.debug.log(e)
+        return documents
 
     def prepare_document(self, doc: Document):
         """
@@ -372,19 +457,18 @@ class Indexing:
 
         for file in files:   # per file to allow use of multiple loaders
             try:
-                # remove old file from index if exists
-                file_id = self.window.core.idx.files.get_id(file)
-
                 if self.is_stopped():  # force stop
                     break
 
                 # force replace or not old document
                 if replace is not None:
                     if replace:
+                        file_id = self.window.core.idx.files.get_id(file)
                         self.remove_old_file(idx, file_id, force=True)
                 else:
                     # if auto, only replace if not temporary
                     if not is_tmp:
+                        file_id = self.window.core.idx.files.get_id(file)
                         self.remove_old_file(idx, file_id)
 
                 # index new version of file
@@ -894,6 +978,120 @@ class Indexing:
         except Exception as e:
             self.window.core.debug.log(e)
         index.insert(document=doc)
+
+    def index_attachment(
+            self,
+            file_path: str,
+            index_path: str,
+            model: ModelItem = None,
+            documents: list = None,
+    ) -> list:
+        """
+        Index context attachment
+
+        :param file_path: path to file to index
+        :param index_path: index path
+        :param model: model
+        :param documents: list of documents (optional)
+        :return: response
+        """
+        if model is None:
+            model = self.window.core.models.from_defaults()
+
+        service_context = self.window.core.idx.llm.get_service_context(model=model)
+        index = self.window.core.idx.storage.get_ctx_idx(index_path, service_context=service_context)  # get or create ctx index
+
+        idx = "tmp:{}".format(index_path)  # tmp index id
+        self.window.core.idx.log("Indexing to context attachment index: {}...".format(idx))
+
+        doc_ids = []
+        if documents is None:
+            documents = self.get_documents(file_path)
+        for d in documents:
+            if self.is_stopped():  # force stop
+                break
+            self.prepare_document(d)
+            self.index_document(index, d)
+            doc_ids.append(d.id_)  # add to index
+
+        self.window.core.idx.storage.store_ctx_idx(index_path, index)
+        return doc_ids
+
+    def index_attachment_web(
+            self,
+            url: str,
+            index_path: str,
+            model: ModelItem = None,
+            documents: list = None,
+    ) -> list:
+        """
+        Index context attachment
+
+        :param url: URL to index
+        :param index_path: index path
+        :param model: model
+        :param documents: list of documents (optional)
+        :return: response
+        """
+        if model is None:
+            model = self.window.core.models.from_defaults()
+
+        service_context = self.window.core.idx.llm.get_service_context(model=model)
+        index = self.window.core.idx.storage.get_ctx_idx(index_path, service_context=service_context)  # get or create ctx index
+
+        idx = "tmp:{}".format(index_path)  # tmp index id
+        self.window.core.idx.log("Indexing to context attachment index: {}...".format(idx))
+
+        web_type = self.get_webtype(url)
+        doc_ids = []
+        if documents is None:
+            documents = self.read_web(
+                url=url,
+                type=web_type,
+                extra_args={},
+            )
+        for d in documents:
+            if self.is_stopped():  # force stop
+                break
+            self.prepare_document(d)
+            self.index_document(index, d)
+            doc_ids.append(d.id_)  # add to index
+
+        self.window.core.idx.storage.store_ctx_idx(index_path, index)
+        return doc_ids
+
+    def get_webtype(self, url: str) -> str:
+        """
+        Get web loader type by URL
+
+        :param url: URL
+        :return: web loader type
+        """
+        type = "webpage"  # default
+        for id in self.data_providers:
+            loader = self.data_providers[id]
+            if hasattr(loader, "is_supported_attachment"):
+                if loader.is_supported_attachment(url):
+                    type = id
+                    break
+        print("Selected web data loader: {}".format(type))
+        return type
+
+    def remove_attachment(self, index_path: str, doc_id: str) -> bool:
+        """
+        Remove document from index
+
+        :param index_path: index path
+        :param doc_id: document ID
+        :return: True if success
+        """
+        model = self.window.core.models.from_defaults()
+        service_context = self.window.core.idx.llm.get_service_context(model=model)
+        index = self.window.core.idx.storage.get_ctx_idx(index_path,
+                                                         service_context=service_context)  # get or create ctx index
+        index.delete_ref_doc(doc_id)
+        self.window.core.idx.storage.store_ctx_idx(index_path, index)
+        return True
 
     def apply_rate_limit(self):
         """Apply API calls RPM limit"""

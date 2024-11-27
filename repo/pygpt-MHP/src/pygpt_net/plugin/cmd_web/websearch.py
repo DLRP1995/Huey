@@ -6,7 +6,7 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.20 03:00:00                  #
+# Updated Date: 2024.11.21 02:00:00                  #
 # ================================================== #
 
 import re
@@ -178,7 +178,7 @@ class WebSearch:
                     'context': bridge_context,
                     'extra': {},
                 })
-                self.plugin.window.core.dispatcher.dispatch(event)
+                self.plugin.window.dispatch(event)
                 response = event.data.get('response')
                 if response is not None and response != "":
                     summary += response
@@ -423,8 +423,6 @@ class WebSearch:
 
         :return: True if threaded
         """
-        if (self.plugin is not None
-                and self.plugin.window is not None
-                and self.plugin.window.core.config.get("mode") == "agent_llama"):
-            return True
+        if self.plugin is not None:
+            return self.plugin.is_threaded()
         return False

@@ -21,7 +21,7 @@ class Plugin(BasePlugin):
     def __init__(self, *args, **kwargs):
         super(Plugin, self).__init__(*args, **kwargs)
         self.id = "cmd_custom"
-        self.name = "Command: Custom Commands"
+        self.name = "Custom Commands"
         self.description = "Provides availability to create and execute custom commands"
         self.prefix = "Custom"
         self.order = 100
@@ -95,6 +95,9 @@ class Plugin(BasePlugin):
 
         if not is_cmd:
             return
+
+        # set state: busy
+        self.cmd_prepare(ctx, my_commands)
 
         try:
             worker = Worker()

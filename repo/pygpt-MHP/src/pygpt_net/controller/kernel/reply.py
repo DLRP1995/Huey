@@ -6,7 +6,7 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.20 03:00:00                  #
+# Updated Date: 2024.11.25 01:00:00                  #
 # ================================================== #
 
 import json
@@ -23,26 +23,23 @@ class Reply:
         :param window: Window instance
         """
         self.window = window
-        self.nolog_events = ["system.prompt"]
         self.reply_stack = []
         self.reply_ctx = None
         self.last_result = None
         self.reply_idx = -1
 
-    def add(self, context, extra, flush: bool = False) -> list:
+    def add(self, context, extra) -> list:
         """
         Send reply from plugins to model
 
         :param context: bridge context
         :param extra: extra data
-        :param flush: flush reply stack
         :return: list of results
         """
         flush = False
         if "flush" in extra and extra["flush"]:
             flush = True
         ctx = context.ctx
-        self.run_post_response(ctx, extra)
         if ctx is not None:
             self.run_post_response(ctx, extra)
             self.last_result = ctx.results
@@ -53,8 +50,9 @@ class Reply:
                 self.window.core.debug.debug("CTX REPLY: " + str(ctx))
             if ctx.reply:
                 if self.reply_idx >= ctx.pid:  # skip if reply already sent for this context
+                    # >>> this prevents multiple replies from the same ctx item <<<
                     return []
-                self.reply_idx = ctx.pid
+                self.reply_idx = ctx.pid 
                 self.append(ctx)
             if flush or self.window.controller.kernel.async_allowed(ctx):
                 self.flush()
@@ -69,7 +67,6 @@ class Reply:
         """
         self.window.core.debug.info("Reply stack (add)...")
         self.reply_stack.append(ctx.results)
-        # ctx.cmds = []  # clear commands  (disables expand output in render)
         ctx.results = []  # clear results
         self.reply_ctx = ctx
 
@@ -84,11 +81,11 @@ class Reply:
             for result in responses:
                 results.append(result)
 
-        self.window.ui.status("")  # clear status
+        self.window.update_status("")  # clear status
         if self.reply_ctx.internal:
-            if self.window.controller.agent.enabled():
-                self.window.controller.agent.add_run()
-                self.window.controller.agent.update()
+            if self.window.controller.agent.legacy.enabled():
+                self.window.controller.agent.legacy.add_run()
+                self.window.controller.agent.legacy.update()
 
         # prepare data to send as reply
         tool_data = json.dumps(results)
@@ -99,8 +96,9 @@ class Reply:
 
         prev_ctx = self.window.core.ctx.as_previous(self.reply_ctx)  # copy result to previous ctx and clear current ctx
         self.window.core.ctx.update_item(self.reply_ctx)  # update context in db
-        self.window.ui.status('...')
+        self.window.update_status('...')
 
+        # if response from sub call, from experts
         parent_id = None
         if self.reply_ctx.sub_call:
             if self.reply_ctx.meta is not None:
@@ -112,7 +110,7 @@ class Reply:
             "tool_data": tool_data,
         }
         event = RenderEvent(RenderEvent.TOOL_UPDATE, data)
-        self.window.core.dispatcher.dispatch(event)
+        self.window.dispatch(event)
         self.clear()
 
         # send reply
@@ -129,7 +127,7 @@ class Reply:
             'context': context,
             'extra': extra,
         })
-        self.window.core.dispatcher.dispatch(event)
+        self.window.dispatch(event)
 
     def run_post_response(self, ctx: CtxItem, extra_data: dict = None):
         """
@@ -139,7 +137,7 @@ class Reply:
         :param extra_data: extra data
         """
         if isinstance(extra_data, dict):
-            if (ctx is None or not ctx.agent_call) or not self.is_threaded():
+            if (ctx is None or not ctx.agent_call) or not self.window.controller.kernel.is_threaded():
                 if "post_update" in extra_data and isinstance(extra_data["post_update"], list):
                     if "file_explorer" in extra_data["post_update"]:
                         # update file explorer view
@@ -150,16 +148,6 @@ class Reply:
         self.window.core.debug.info("Reply stack (clear)...")
         self.reply_ctx = None
         self.reply_stack = []
-
-    def is_threaded(self) -> bool:
-        """
-        Check if plugin is threaded
-
-        :return: True if threaded
-        """
-        if self.window.core.config.get("mode") == "agent_llama":
-            return True
-        return False
 
     def is_log(self) -> bool:
         """

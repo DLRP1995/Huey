@@ -6,9 +6,10 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.18 21:00:00                  #
+# Updated Date: 2024.11.24 22:00:00                  #
 # ================================================== #
 
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
 
 from pygpt_net.plugin.base.plugin import BasePlugin
@@ -17,6 +18,7 @@ from pygpt_net.ui.widget.option.checkbox import OptionCheckbox
 from pygpt_net.ui.widget.option.dictionary import OptionDict
 from pygpt_net.ui.widget.option.textarea import OptionTextarea
 from pygpt_net.utils import trans
+
 import pygpt_net.icons_rc
 
 
@@ -98,6 +100,8 @@ class OptionCmd(QWidget):
         self.window.ui.nodes[desc_key].setWordWrap(True)
         self.window.ui.nodes[desc_key].setMaximumHeight(40)
         self.window.ui.nodes[desc_key].setStyleSheet("font-size: 10px;")
+        self.window.ui.nodes[desc_key].setProperty('class', 'label-help')
+        self.window.ui.nodes[desc_key].setContentsMargins(35, 0, 0, 0)
 
         instr_key = "settings.cmd.field.instruction"
         params_key = "settings.cmd.field.params"
@@ -105,7 +109,7 @@ class OptionCmd(QWidget):
         params_label = QLabel(trans(params_key))
 
         # widgets
-        self.enabled = OptionCheckbox(self.window, parent_id, key_enabled, option_enabled)  # enable checkbox
+        self.enabled = OptionCheckbox(self.window, parent_id, key_enabled, option_enabled, icon = ":/icons/build.svg")  # enable checkbox
         self.params = OptionDict(self.window, parent_id, key_params, option_params)  # command params
         self.instruction = OptionTextarea(self.window, parent_id, key_instruction, option_instruction)  # command instruction
 
@@ -124,7 +128,9 @@ class OptionCmd(QWidget):
         group_id = self.parent_id + '.' + id + '.config'
         group = CollapsedGroup(self.window, group_id, None, False, None)
         group.box.setText(trans('settings.cmd.config.collapse'))
+        group.box.setIcon(QIcon(":/icons/expand.svg"))
         group.add_layout(params_layout)
+        group.layout.setContentsMargins(25, 0, 0, 0)
 
         # add to groups
         self.window.ui.groups[group_id] = group
@@ -133,8 +139,8 @@ class OptionCmd(QWidget):
         self.setLayout(self.layout)
 
         # show tooltip only if different from description
-        if txt_tooltip != txt_desc:
-            self.setToolTip(txt_tooltip)
+        # if txt_tooltip != txt_desc:
+            # self.setToolTip(txt_tooltip)
 
         # update
         self.update()

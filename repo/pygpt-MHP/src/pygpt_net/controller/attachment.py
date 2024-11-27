@@ -6,16 +6,20 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.20 03:00:00                  #
+# Updated Date: 2024.11.26 02:00:00                  #
 # ================================================== #
 
 import os
 from datetime import datetime
+from urllib.parse import urlparse
 
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QFileDialog, QApplication
 
-from pygpt_net.core.events import AppEvent
+from pygpt_net.core.types import (
+    MODE_VISION,
+)
+from pygpt_net.core.events import AppEvent, KernelEvent
 from pygpt_net.item.attachment import AttachmentItem
 from pygpt_net.item.ctx import CtxItem
 from pygpt_net.utils import trans
@@ -30,6 +34,7 @@ class Attachment:
         """
         self.window = window
         self.is_lock = False
+        self.is_consumed = False
 
     def setup(self):
         """Setup attachments"""
@@ -47,6 +52,13 @@ class Attachment:
         else:
             self.window.ui.nodes['attachments.capture_clear'].setChecked(False)
 
+        #  auto-index
+        if self.window.core.config.has('attachments_auto_index') \
+                and self.window.core.config.get('attachments_auto_index'):
+            self.window.ui.nodes['attachments.auto_index'].setChecked(True)
+        else:
+            self.window.ui.nodes['attachments.auto_index'].setChecked(False)
+
         self.window.core.attachments.load()
         self.update()
 
@@ -60,7 +72,7 @@ class Attachment:
         if not self.has(mode):
             self.window.controller.chat.vision.unavailable()
         else:
-            if mode == 'vision' or self.window.controller.plugins.is_type_enabled('vision'):
+            if mode == MODE_VISION or self.window.controller.plugins.is_type_enabled('vision'):
                 self.window.controller.chat.vision.available()
 
         # update tokens counter (vision plugin, etc.)
@@ -195,6 +207,7 @@ class Attachment:
             mode=mode,
             item=attachment,
         )
+        self.is_consumed = False  # reset consumed flag
         self.update()
 
     def clear(self, force: bool = False, remove_local=False, auto: bool = False):
@@ -218,12 +231,12 @@ class Attachment:
         self.window.core.attachments.delete_all(
             mode=mode,
             remove_local=remove_local,
+            auto=auto,
         )
-
         self.window.controller.chat.vision.unavailable()  # set no content to provide
         self.update()
         if not auto:
-            self.window.core.dispatcher.dispatch(AppEvent(AppEvent.CTX_ATTACHMENTS_CLEAR))
+            self.window.dispatch(AppEvent(AppEvent.CTX_ATTACHMENTS_CLEAR))
 
     def clear_silent(self):
         """
@@ -262,6 +275,38 @@ class Attachment:
             # save attachments and update attachments list
             self.window.core.attachments.save()
             self.update()
+
+    def open_add_url(self):
+        """Open add attachment URL dialog"""
+        self.window.ui.dialog['url'].id = "attachment"
+        self.window.ui.dialog['url'].input.setText("")
+        self.window.ui.dialog['url'].current = ""
+        self.window.ui.dialog['url'].show()
+        self.window.ui.dialog['url'].input.setFocus()
+
+    def add_url(self, url: str):
+        """
+        Add URL
+
+        :param url: URL
+        """
+        if not url:
+            return
+        mode = self.window.core.config.get('mode')
+        try:
+            domain = urlparse(url).netloc
+        except Exception as e:
+            domain = os.path.basename(url)
+        attachment = self.window.core.attachments.new(
+            mode=mode,
+            name=domain,
+            path=url,
+            auto_save=False,
+            type=AttachmentItem.TYPE_URL,
+        )
+        self.window.core.attachments.save()
+        self.update()
+        self.window.ui.dialog['url'].close()
 
     def open_dir(self, mode: str, idx: int):
         """
@@ -315,6 +360,24 @@ class Attachment:
         if data is None:
             return ''
         return data.path
+
+    def get_by_idx(self, mode: str, idx: int) -> str:
+        """
+        Get attachment by index
+
+        :param mode: mode
+        :param idx: index
+        :return: path
+        """
+        file_id = self.window.core.attachments.get_id_by_idx(
+            mode=mode,
+            idx=idx,
+        )
+        data = self.window.core.attachments.get_by_id(
+            mode=mode,
+            id=file_id,
+        )
+        return data
 
     def has(self, mode: str) -> bool:
         """
@@ -406,6 +469,14 @@ class Attachment:
         """
         self.window.core.config.set('attachments_capture_clear', value)
 
+    def toggle_auto_index(self, value: bool):
+        """
+        Toggle auto index
+
+        :param value: value of the checkbox
+        """
+        self.window.core.config.set('attachments_auto_index', value)
+
     def is_capture_clear(self) -> bool:
         """
         Return True if capture clear is enabled
@@ -458,7 +529,10 @@ class Attachment:
         self.window.core.attachments.new(mode, title, url, False)
         self.window.core.attachments.save()
         self.window.controller.attachment.update()
-        self.window.statusChanged.emit(trans("painter.capture.manual.captured.success") + ' ' + os.path.basename(url))
+        event = KernelEvent(KernelEvent.STATUS, {
+            'status': trans("painter.capture.manual.captured.success") + ' ' + os.path.basename(url),
+        })
+        self.window.dispatch(event)
 
     def from_clipboard_text(self, text: str, all: bool = False):
         """
@@ -532,8 +606,9 @@ class Attachment:
         if not ctx.cmds:
             return True
         for item in ctx.cmds:
-            if item["cmd"] in ["analyze_image_attachment"]:
-                return False
+            if "cmd" in item:
+                if item["cmd"] in ["analyze_image_attachment"]:
+                    return False
         return True
 
     def reload(self):

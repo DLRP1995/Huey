@@ -16,7 +16,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from pygpt_net.plugin.base.plugin import BasePlugin
-from pygpt_net.core.events import Event
+from pygpt_net.core.events import Event, KernelEvent
 from pygpt_net.item.ctx import CtxItem
 
 from .config import Config
@@ -27,7 +27,7 @@ class Plugin(BasePlugin):
     def __init__(self, *args, **kwargs):
         super(Plugin, self).__init__(*args, **kwargs)
         self.id = "cmd_api"
-        self.name = "Command: API calls"
+        self.name = "API calls"
         self.description = "Provides the ability to make external API calls"
         self.prefix = "API"
         self.order = 100
@@ -109,6 +109,9 @@ class Plugin(BasePlugin):
 
         if not is_cmd:
             return
+
+        # set state: busy
+        self.cmd_prepare(ctx, my_commands)
 
         try:
             worker = Worker()

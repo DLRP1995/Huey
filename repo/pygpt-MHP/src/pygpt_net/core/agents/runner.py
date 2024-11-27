@@ -6,7 +6,7 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.20 03:00:00                  #
+# Updated Date: 2024.11.21 20:00:00                  #
 # ================================================== #
 
 from pygpt_net.core.bridge.context import BridgeContext
@@ -53,6 +53,7 @@ class Runner:
             ctx = context.ctx
             ctx.extra["agent_input"] = True  # mark as user input
             ctx.agent_call = True  # disables reply from plugin commands
+            prompt = context.prompt
 
             # prepare agent
             model = context.model
@@ -85,6 +86,7 @@ class Runner:
             kwargs = {
                 "agent": agent,
                 "ctx": ctx,
+                "prompt": prompt,
                 "signals": signals,
                 "verbose": verbose,
             }
@@ -104,6 +106,7 @@ class Runner:
             self,
             agent,
             ctx: CtxItem,
+            prompt: str,
             signals: BridgeSignals,
             verbose: bool = False
     ) -> bool:
@@ -112,6 +115,7 @@ class Runner:
 
         :param agent: Agent instance
         :param ctx: Input context
+        :param prompt: input text
         :param signals: BridgeSignals
         :param verbose: verbose mode
         :return: True if success
@@ -120,19 +124,41 @@ class Runner:
             return True  # abort if stopped
 
         is_last = False
-        task = agent.create_task(self.prepare_input(ctx.input))
+        task = agent.create_task(self.prepare_input(prompt))
         tools_output = None
 
         # run steps
         i = 1
+        idx = 0
         while not is_last:
             if self.is_stopped():
                 break  # handle force stop
 
+            if verbose:
+                print ("\n----------- BEGIN STEP {} ----------\n".format(i))
+
+            self.set_busy(signals)
             step_output = agent.run_step(task.task_id)
             is_last = step_output.is_last
+
             # append each step to chat output, last step = final response, so we skip it
             tools_output = self.window.core.agents.tools.export_sources(step_output.output)
+
+            # get only current step tool calls using idx
+            if tools_output:
+                # check if idx is in range
+                if idx < len(tools_output):
+                    tools_output = [tools_output[idx]]
+                    # INFO: idx is indexed from 0
+                    # because tool outputs from previous step goes to the next ctx item!
+
+            if verbose:
+                print("\n")
+                print("Step: " + str(i))
+                print("Is last: " + str(is_last))
+                print("Tool calls: " + str(tools_output))
+                print("\n")
+
             if not is_last:
                 step_ctx = self.add_ctx(ctx)
                 step_ctx.set_input(str(tools_output))
@@ -141,6 +167,8 @@ class Runner:
                     i=str(i)
                 ))
                 step_ctx.cmds = tools_output
+                step_ctx.results = ctx.results  # get results from base ctx
+                ctx.results = []  # reset results
 
                 # copy extra data (output from plugins)
                 if tools_output:
@@ -156,6 +184,7 @@ class Runner:
                 step_ctx.extra["agent_step"] = True
                 self.send_response(step_ctx, signals, KernelEvent.APPEND_DATA)
             i += 1
+            idx += 1
 
         # final response
         if is_last:
@@ -168,12 +197,14 @@ class Runner:
             response_ctx.extra["agent_output"] = True  # mark as output response
             response_ctx.extra["agent_finish"] = True  # mark as finished
             self.send_response(response_ctx, signals, KernelEvent.APPEND_DATA)
+        self.set_idle(signals)
         return True
 
     def run_assistant(
             self,
             agent,
             ctx: CtxItem,
+            prompt: str,
             signals: BridgeSignals,
             verbose: bool = False
     ) -> bool:
@@ -182,6 +213,7 @@ class Runner:
 
         :param agent: Agent instance
         :param ctx: Input context
+        :param prompt: input text
         :param signals: BridgeSignals
         :param verbose: verbose mode
         :return: True if success
@@ -205,7 +237,8 @@ class Runner:
             return True  # abort if stopped
 
         # final response
-        response = agent.chat(self.prepare_input(ctx.input))
+        self.set_busy(signals)
+        response = agent.chat(self.prepare_input(prompt))
         response_ctx = self.add_ctx(ctx)
         response_ctx.thread = thread_id
         response_ctx.set_input("Assistant")
@@ -219,6 +252,7 @@ class Runner:
             self,
             agent,
             ctx: CtxItem,
+            prompt: str,
             signals: BridgeSignals,
             verbose: bool = False
     ) -> bool:
@@ -227,6 +261,7 @@ class Runner:
 
         :param agent: Agent instance
         :param ctx: Input context
+        :param prompt: input text
         :param signals: BridgeSignals
         :param verbose: verbose mode
         :return: True if success
@@ -234,13 +269,14 @@ class Runner:
         if self.is_stopped():
             return True  # abort if stopped
 
+        self.set_busy(signals)
         plan_id = agent.create_plan(
-            self.prepare_input(ctx.input)
+            self.prepare_input(prompt)
         )
         plan = agent.state.plan_dict[plan_id]
         c = len(plan.sub_tasks)
 
-        # send plan description
+        # prepare plan description
         plan_desc = "`{current_plan}:`\n".format(
             current_plan=trans('msg.agent.plan.current')
         )
@@ -264,6 +300,8 @@ class Runner:
         if verbose:
             print(plan_desc)
 
+        # -----------------------------------------------------------
+
         step_ctx = self.add_ctx(ctx)
         step_ctx.set_input("{num_subtasks_label}: {count}, {plan_label}: {plan_id}".format(
             num_subtasks_label=trans('msg.agent.plan.num_subtasks'),
@@ -273,14 +311,19 @@ class Runner:
         ))
         step_ctx.set_output(plan_desc)
         step_ctx.cmds = []
-        self.send_response(step_ctx, signals, KernelEvent.APPEND_DATA)
+        self.send_response(step_ctx, signals, KernelEvent.APPEND_DATA)  # send plan description
 
         i = 1
         for sub_task in plan.sub_tasks:
             if self.is_stopped():
                 break
+
+            self.set_busy(signals)
+
             j = 1
             task = agent.state.get_task(sub_task.name)
+
+            self.set_status(signals, trans("status.agent.reasoning"))
             step_output = agent.run_step(task.task_id)
             tools_output = self.window.core.agents.tools.export_sources(step_output.output)
 
@@ -299,8 +342,9 @@ class Runner:
             if verbose:
                 print(task_header)
 
+            # this can be the last step in current sub-task, so send it first
             step_ctx = self.add_ctx(ctx)
-            step_ctx.set_input(str(ctx.results))
+            step_ctx.set_input(str(tools_output)) # TODO: tool_outputs?
             step_ctx.set_output("`{sub_task_label} {i}/{c}, {step_label} {j}`\n{task_header}".format(
                 sub_task_label=trans('msg.agent.plan.subtask'),
                 i=str(i),
@@ -315,14 +359,17 @@ class Runner:
 
             # -----------------------------------------------------------
 
-            # loop until the last step is reached
+            # loop until the last step is reached, if first step is not last
             while not step_output.is_last:
                 if self.is_stopped():
                     break
 
+                self.set_busy(signals)
+
                 step_output = agent.run_step(task.task_id)
                 tools_output = self.window.core.agents.tools.export_sources(step_output.output)
 
+                # do not send again the first step (it was sent before the loop)
                 if j > 1:
                     step_ctx = self.add_ctx(ctx)
                     step_ctx.set_input(str(tools_output))
@@ -341,7 +388,7 @@ class Runner:
 
             # finalize the response and commit to memory
             extra = {}
-            extra["agent_output"] = True,  # mark as output response
+            extra["agent_output"] = True,  # mark as output response (will be attached to ctx items on continue)
 
             if i == c:  # if last subtask
                 extra["agent_finish"] = True
@@ -349,12 +396,13 @@ class Runner:
             if self.is_stopped():
                 return True  # abort if stopped
 
+            # the is no tool calls here, only final response
             if step_output.is_last:
                 response = agent.finalize_response(task.task_id, step_output=step_output)
                 response_ctx = self.add_ctx(ctx)
                 response_ctx.set_input(str(tools_output))
                 response_ctx.set_output(str(response))
-                response_ctx.extra.update(extra)
+                response_ctx.extra.update(extra)  # extend with `agent_output` and `agent_finish`
                 self.send_response(response_ctx, signals, KernelEvent.APPEND_DATA)
             i += 1
 
@@ -362,7 +410,10 @@ class Runner:
 
     def copy_step_results(self, step_ctx: CtxItem, ctx: CtxItem, tools_output: list):
         """
-        Copy step results
+        Copy step results from base context item
+
+        INFO: It is required to copy results from previous context item to the current one
+        because tool calls store their output in the base context item, so we need to copy it
 
         :param step_ctx: previous context
         :param ctx: current context
@@ -370,13 +421,14 @@ class Runner:
         """
         step_ctx.cmds = tools_output
         step_ctx.results = ctx.results
+
         # copy extra data (output from plugins)
         if tools_output:
             for k in ctx.extra:
-                if not k.startswith("agent_"):
-                    step_ctx.extra[k] = ctx.extra[k]
+                if not k.startswith("agent_"):  # do not copy `agent_input` and etc.
+                    step_ctx.extra[k] = ctx.extra[k]  # copy only plugin output
 
-        # reset input ctx
+        # reset input ctx, remove outputs from plugins (tools) from previous step
         for k in list(ctx.extra.keys()):
             if k != "agent_input":
                 del ctx.extra[k]
@@ -426,6 +478,7 @@ class Runner:
         tools = self.window.core.agents.observer.evaluation.get_tools()
 
         # evaluate
+        self.set_busy(signals)
         self.next_instruction = ""  # reset
         self.prev_score = -1  # reset
         self.run_once(prompt, tools, ctx.model)  # tool will update evaluation
@@ -448,7 +501,7 @@ class Runner:
             score_label=trans('eval.score'),
             score=str(score)
         )
-        self.send_response(ctx, signals, KernelEvent.SET_STATUS, msg=msg)
+        self.set_status(signals, msg)
         if score < 0:
             self.send_response(ctx, signals, KernelEvent.APPEND_END)
             return True
@@ -479,6 +532,8 @@ class Runner:
             "footer": "Score: " + str(score) + "%",
         }
         step_ctx.internal = False  # input
+
+        self.set_busy(signals)
         self.send_response(step_ctx, signals, KernelEvent.APPEND_DATA)
 
         # call next run
@@ -530,6 +585,48 @@ class Runner:
         })
         signals.response.emit(event)
 
+    def set_busy(self, signals: BridgeSignals, **kwargs):
+        """
+        Set busy status
+
+        :param signals: BridgeSignals
+        :param kwargs: extra data
+        """
+        data = {
+            "id": "agent",
+            "msg": trans("status.agent.reasoning"),
+        }
+        event = KernelEvent(KernelEvent.STATE_BUSY, data)
+        data.update(kwargs)
+        signals.response.emit(event)
+
+    def set_idle(self, signals: BridgeSignals, **kwargs):
+        """
+        Set idle status
+
+        :param signals: BridgeSignals
+        :param kwargs: extra data
+        """
+        data = {
+            "id": "agent",
+        }
+        event = KernelEvent(KernelEvent.STATE_IDLE, data)
+        data.update(kwargs)
+        signals.response.emit(event)
+
+    def set_status(self, signals: BridgeSignals, msg: str):
+        """
+        Set busy status
+
+        :param signals: BridgeSignals
+        :param msg: status message
+        """
+        data = {
+            "status": msg,
+        }
+        event = KernelEvent(KernelEvent.STATUS, data)
+        signals.response.emit(event)
+
     def prepare_input(self, prompt: str) -> str:
         """
         Prepare input context
@@ -539,7 +636,7 @@ class Runner:
         event = Event(Event.AGENT_PROMPT, {
             'value': prompt,
         })
-        self.window.core.dispatcher.dispatch(event)
+        self.window.dispatch(event)
         return event.data['value']
 
     def is_stopped(self) -> bool:
@@ -548,7 +645,7 @@ class Runner:
 
         :return: True if stopped
         """
-        return self.window.controller.kernel.stopped() or self.window.controller.agent.flow.stop
+        return self.window.controller.kernel.stopped()
 
     def get_error(self) -> Exception or None:
         """

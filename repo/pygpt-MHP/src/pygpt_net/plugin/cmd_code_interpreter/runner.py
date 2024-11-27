@@ -6,10 +6,11 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.16 05:00:00                  #
+# Updated Date: 2024.11.26 04:00:00                  #
 # ================================================== #
 
 import os.path
+import re
 import subprocess
 import docker
 
@@ -101,20 +102,59 @@ class Runner:
         )
         return result
 
-    def handle_result_ipython(self, response) -> str:
+    def extract_data_paths(self, text):
         """
-        Handle result from ipython container
+        Extracts all file paths starting with '/data' from the given text.
 
+        Parameters:
+        text (str): The input text from which to extract paths.
+
+        Returns:
+        list: A list of paths starting with '/data'.
+        """
+        if text is None:
+            return []
+        pattern = r"(/data/[^\s'\";]+)"
+        paths = re.findall(pattern, text)
+        return paths
+
+    def extract_files(self, ctx: CtxItem, response: str) -> list:
+        """
+        Extract files from response
+
+        :param ctx: CtxItem
+        :param response: response
+        :return: files list
+        """
+        images_list = []
+        local_path = os.path.join(self.plugin.window.core.config.get_user_dir('data'), "ipython")
+        paths = self.extract_data_paths(response)
+        dir_suffix = "/"
+        if self.plugin.window.core.platforms.is_windows():
+            dir_suffix = "\\"
+        for i, file in enumerate(paths):
+            paths[i] = file.replace("/data/", local_path + dir_suffix)
+        for path in paths:
+            if path.strip().split(".")[-1].lower() in ["png", "jpg", "jpeg", "gif", "bmp", "tiff"]:
+                images_list.append(path)
+
+        # append to ctx
+        ctx.files = paths
+        ctx.images = self.plugin.window.core.filesystem.make_local_list(list(images_list))
+        return paths
+
+    def handle_result_ipython(self, ctx: CtxItem, response) -> str:
+        """
+        Handle result from ipython container, check for files and images
+
+        :param ctx: CtxItem
         :param response: response
         :return: result
         """
-        result = response
-        self.send_interpreter_output(result, "stdout")
-        self.log(
-            "Result: {}".format(result),
-            sandbox=True,
-        )
-        return result
+        paths = self.extract_files(ctx, response)
+        if len(paths) == 0:
+            self.extract_files(ctx, ctx.input)
+        return response
 
     def is_sandbox(self) -> bool:
         """
@@ -161,18 +201,8 @@ class Runner:
         :param cmd: command to run
         :return: response
         """
-        client = self.get_docker()
-        mapping = self.get_volumes()
-        response = None
         try:
-            response = client.containers.run(
-                self.get_docker_image(),
-                cmd,
-                volumes=mapping,
-                working_dir="/data",
-                stdout=True,
-                stderr=True,
-            )
+            response = self.plugin.docker.execute(cmd)
         except Exception as e:
             # self.error(e)
             response = str(e).encode("utf-8")
@@ -352,60 +382,6 @@ class Runner:
             "context": "PYTHON OUTPUT:\n--------------------------------\n" + self.parse_result(result),
         }
 
-    def sys_exec_host(self, ctx: CtxItem, item: dict, request: dict) -> dict:
-        """
-        Execute system command on host
-
-        :param ctx: CtxItem
-        :param item: command item
-        :param request: request item
-        :return: response dict
-        """
-        msg = "Executing system command: {}".format(item["params"]['command'])
-        self.log(msg)
-        self.log("Running command: {}".format(item["params"]['command']))
-        try:
-            process = subprocess.Popen(
-                item["params"]['command'],
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            stdout, stderr = process.communicate()
-        except Exception as e:
-            self.error(e)
-            stdout = None
-            stderr = str(e).encode("utf-8")
-        result = self.handle_result(stdout, stderr)
-        return {
-            "request": request,
-            "result": str(result),
-            "context": "SYS OUTPUT:\n--------------------------------\n" + self.parse_result(result),
-        }
-
-    def sys_exec_sandbox(self, ctx: CtxItem, item: dict, request: dict) -> dict:
-        """
-        Execute system command in sandbox (docker)
-
-        :param ctx: CtxItem
-        :param item: command item
-        :param request: request item
-        :return: response dict
-        """
-        msg = "Executing system command: {}".format(item["params"]['command'])
-        self.log(msg, sandbox=True)
-        self.log(
-            "Running command: {}".format(item["params"]['command']),
-            sandbox=True,
-        )
-        response = self.run_docker(item["params"]['command'])
-        result = self.handle_result_docker(response)
-        return {
-            "request": request,
-            "result": str(result),
-            "context": "SYS OUTPUT:\n--------------------------------\n" + self.parse_result(result),
-        }
-
     def ipython_execute_new(self, ctx, item: dict, request: dict, all: bool = False) -> dict:
         """
         Execute code in IPython interpreter (new kernel)
@@ -440,8 +416,8 @@ class Runner:
         self.log("Connecting to IPython interpreter...", sandbox=True)
         try:
             self.log("Please wait...", sandbox=True)
-            result = self.plugin.ipython.execute(data, current=False)
-            # self.handle_result_ipython(result)  # handle result -> to output
+            result = self.plugin.get_interpreter().execute(data, current=False)
+            result = self.handle_result_ipython(ctx, result)
         except Exception as e:
             self.error(e)
             result = str(e)
@@ -485,8 +461,8 @@ class Runner:
         self.log("Connecting to IPython interpreter...", sandbox=True)
         try:
             self.log("Please wait...", sandbox=True)
-            result = self.plugin.ipython.execute(data, current=True)
-            # self.handle_result_ipython(result)  # handle result -> to output
+            result = self.plugin.get_interpreter().execute(data, current=True)
+            result = self.handle_result_ipython(ctx, result)
         except Exception as e:
             self.error(e)
             result = str(e)
@@ -513,7 +489,7 @@ class Runner:
         self.log("Connecting to IPython interpreter...", sandbox=True)
         try:
             self.log("Restarting IPython kernel...", sandbox=True)
-            response = self.plugin.ipython.restart_kernel()
+            response = self.plugin.get_interpreter().restart_kernel()
         except Exception as e:
             self.error(e)
             response = False

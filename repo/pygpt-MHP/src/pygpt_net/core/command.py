@@ -6,13 +6,19 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.20 03:00:00                  #
+# Updated Date: 2024.11.21 20:00:00                  #
 # ================================================== #
 
 import copy
 import json
 import re
 
+from pygpt_net.core.types import (
+    MODE_ASSISTANT,
+    MODE_COMPLETION,
+    MODE_LANGCHAIN,
+    MODE_LLAMA_INDEX,
+)
 from pygpt_net.core.events import Event
 from pygpt_net.item.ctx import CtxItem
 
@@ -40,7 +46,7 @@ class Command:
         extra = ""
         schema = self.extract_syntax(data['cmd'])
         if schema:
-            if self.window.core.config.get('mode') == "assistant":
+            if self.window.core.config.get('mode') == MODE_ASSISTANT:
                 extra = self.window.core.prompt.get('cmd.extra.assistants')  # Assistants API env fix
             else:
                 extra = self.window.core.prompt.get('cmd.extra')
@@ -391,15 +397,15 @@ class Command:
 
         if self.window.core.config.get('cmd') or all:
             event = Event(Event.CMD_SYNTAX, data)
-            self.window.core.dispatcher.dispatch(event)
+            self.window.dispatch(event)
         elif self.window.controller.plugins.is_type_enabled("cmd.inline"):
             event = Event(Event.CMD_SYNTAX_INLINE, data)
-            self.window.core.dispatcher.dispatch(event)
+            self.window.dispatch(event)
 
         cmds = copy.deepcopy(data['cmd'])  # make copy to prevent changes in original plugins cmd
         func_plugins = self.cmds_to_functions(cmds)  # plugin functions
-        if self.window.controller.agent.enabled():
-            func_agent = self.cmds_to_functions(self.window.controller.agent.flow.get_functions())  # agent functions
+        if self.window.controller.agent.legacy.enabled():
+            func_agent = self.cmds_to_functions(self.window.controller.agent.legacy.get_functions())  # agent functions
         if self.window.controller.agent.experts.enabled():
             func_experts = self.cmds_to_functions(self.window.core.experts.get_functions())  # agent functions
         return func_plugins + func_agent + func_experts
@@ -528,13 +534,13 @@ class Command:
         :return: True if enabled
         """
         disabled_modes = [
-            "llama_index",
-            "langchain",
-            "completion",
+            MODE_LLAMA_INDEX,
+            MODE_LANGCHAIN,
+            MODE_COMPLETION,
         ]
         mode = self.window.core.config.get('mode')
         if mode in disabled_modes:
             return False  # disabled for specific modes
-        if self.window.controller.agent.enabled() or self.window.controller.agent.experts.enabled():
+        if self.window.controller.agent.legacy.enabled() or self.window.controller.agent.experts.enabled():
             return False
         return self.window.core.config.get('func_call.native', False)  # otherwise check config

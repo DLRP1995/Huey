@@ -6,21 +6,35 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.08 23:00:00                  #
+# Updated Date: 2024.11.26 19:00:00                  #
 # ================================================== #
 
 import tiktoken
 
+from pygpt_net.core.types import (
+    MODE_AGENT,
+    MODE_AGENT_LLAMA,
+    MODE_ASSISTANT,
+    MODE_AUDIO,
+    MODE_CHAT,
+    MODE_COMPLETION,
+    MODE_EXPERT,
+    MODE_LANGCHAIN,
+    MODE_LLAMA_INDEX,
+    MODE_VISION,
+)
 from pygpt_net.item.ctx import CtxItem
 
 CHAT_MODES = [
-    "chat",
-    "vision",
-    "langchain",
-    "assistant",
-    "llama_index",
-    "agent",
-    "expert",
+    MODE_CHAT,
+    MODE_VISION,
+    MODE_LANGCHAIN,
+    MODE_ASSISTANT,
+    MODE_LLAMA_INDEX,
+    MODE_AGENT,
+    MODE_AGENT_LLAMA,
+    MODE_EXPERT,
+    MODE_AUDIO,
 ]
 
 
@@ -188,7 +202,7 @@ class Tokens:
         return num
 
     @staticmethod
-    def from_ctx(ctx: CtxItem, mode: str = "chat", model: str = "gpt-4") -> int:
+    def from_ctx(ctx: CtxItem, mode: str = MODE_CHAT, model: str = "gpt-4") -> int:
         """
         Return number of tokens from context ctx
 
@@ -203,13 +217,13 @@ class Tokens:
         if mode in CHAT_MODES:
             # input message
             try:
-                num += Tokens.from_str(str(ctx.input), model)
+                num += Tokens.from_str(str(ctx.final_input), model)
             except Exception as e:
                 print("Tokens calc exception", e)
 
             # output message
             try:
-                num += Tokens.from_str(str(ctx.output), model)
+                num += Tokens.from_str(str(ctx.final_output), model)
             except Exception as e:
                 print("Tokens calc exception", e)
 
@@ -242,23 +256,23 @@ class Tokens:
                 print("Tokens calc exception", e)
 
         # build tmp message if completion mode
-        elif mode == "completion":
+        elif mode == MODE_COMPLETION:
             message = ""
             # if with names
             if ctx.input_name is not None \
                     and ctx.output_name is not None \
                     and ctx.input_name != "" \
                     and ctx.output_name != "":
-                if ctx.input is not None and ctx.input != "":
-                    message += "\n" + ctx.input_name + ": " + ctx.input
-                if ctx.output is not None and ctx.output != "":
-                    message += "\n" + ctx.output_name + ": " + ctx.output
+                if ctx.final_input is not None and ctx.final_input != "":
+                    message += "\n" + ctx.input_name + ": " + ctx.final_input
+                if ctx.final_output is not None and ctx.final_output != "":
+                    message += "\n" + ctx.output_name + ": " + ctx.final_output
             # if without names
             else:
-                if ctx.input is not None and ctx.input != "":
-                    message += "\n" + ctx.input
-                if ctx.output is not None and ctx.output != "":
-                    message += "\n" + ctx.output
+                if ctx.final_input is not None and ctx.final_input != "":
+                    message += "\n" + ctx.final_input
+                if ctx.final_output is not None and ctx.final_output != "":
+                    message += "\n" + ctx.final_output
             try:
                 num += Tokens.from_str(message, model)
             except Exception as e:
@@ -299,7 +313,7 @@ class Tokens:
             if input_prompt is not None and input_prompt != "":
                 input_tokens = self.from_prompt(input_prompt, "", model_id)
                 input_tokens += self.from_text("user", model_id)
-        elif mode == "completion":
+        elif mode == MODE_COMPLETION:
             # system prompt (without extra tokens)
             system_prompt = str(self.window.core.config.get('prompt')).strip()
             system_prompt = self.window.core.prompt.build_final_system_prompt(system_prompt)  # add addons
@@ -362,7 +376,7 @@ class Tokens:
         model_id = self.window.core.models.get_id(model)
         mode = self.window.core.config.get('mode')
         tokens = 0
-        if mode == "chat" or mode == "vision":
+        if mode in [MODE_CHAT, MODE_VISION, MODE_AUDIO]:
             tokens += self.from_prompt(system_prompt, "", model_id)  # system prompt
             tokens += self.from_text("system", model_id)
             tokens += self.from_prompt(input_prompt, "", model_id)  # input prompt

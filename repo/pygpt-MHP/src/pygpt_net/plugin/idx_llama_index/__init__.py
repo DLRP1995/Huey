@@ -6,11 +6,14 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.20 03:00:00                  #
+# Updated Date: 2024.11.21 20:00:00                  #
 # ================================================== #
 
 import json
 
+from pygpt_net.core.types import (
+    MODE_LLAMA_INDEX,
+)
 from pygpt_net.plugin.base.plugin import BasePlugin
 from pygpt_net.core.events import Event, KernelEvent
 from pygpt_net.item.ctx import CtxItem
@@ -30,7 +33,7 @@ class Plugin(BasePlugin):
             "get_context",
         ]
         self.ignored_modes = [
-            "llama_index",
+            MODE_LLAMA_INDEX,
         ]
         self.type = [
             "cmd.inline",
@@ -68,7 +71,7 @@ class Plugin(BasePlugin):
             if "mode" in data:
                 self.mode = data['mode']
 
-        elif name == Event.POST_PROMPT:
+        elif name == Event.POST_PROMPT_ASYNC:
             if self.mode in self.ignored_modes:  # ignore
                 return
 
@@ -158,12 +161,28 @@ class Plugin(BasePlugin):
             'context': bridge_context,
             'extra': {},
         })
-        self.window.core.dispatcher.dispatch(event)
+        self.window.dispatch(event)
         response = event.data.get('response')
         if response is not None and response != "":
             prepared_question = response
         return prepared_question
 
+    def get_from_retrieval(self, query: str) -> str:
+        """
+        Get response from retrieval
+
+        :param query: query
+        :return: response
+        """
+        idx = self.get_option_value("idx")
+        indexes = idx.split(",")
+        response = ""
+        for index in indexes:
+            response = self.window.core.idx.chat.query_retrieval(query, index)
+            if response is not None and response != "":
+                break
+        print(response)
+        return response
 
     def on_post_prompt(self, prompt: str, ctx: CtxItem) -> str:
         """
@@ -174,7 +193,7 @@ class Plugin(BasePlugin):
         :return: updated system prompt
         """
         if (not self.get_option_value("ask_llama_first")
-                or self.window.controller.agent.enabled()):
+                or self.window.controller.agent.legacy.enabled()):
             return prompt
 
         question = ctx.input
@@ -184,6 +203,12 @@ class Plugin(BasePlugin):
                 return prompt
 
         self.log("Querying Llama-index for: " + question)
+
+        # at first, try to get from retrieval
+        response = self.get_from_retrieval(question)
+        if response is not None and response != "":
+            self.log("Found using retrieval...")
+            return prompt + "\nADDITIONAL CONTEXT: " + response
 
         response, doc_ids, metas = self.query(question)
         if response is None or len(response) == 0:
@@ -295,6 +320,9 @@ class Plugin(BasePlugin):
 
         if not is_cmd:
             return
+
+        # set state: busy
+        self.cmd_prepare(ctx, my_commands)
 
         try:
             worker = Worker()

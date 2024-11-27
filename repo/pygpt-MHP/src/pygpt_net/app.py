@@ -6,7 +6,7 @@
 # GitHub:  https://github.com/szczyglis-dev/py-gpt   #
 # MIT License                                        #
 # Created By  : Marcin Szczygliński                  #
-# Updated Date: 2024.11.15 00:00:00                  #
+# Updated Date: 2024.11.21 20:00:00                  #
 # ================================================== #
 
 from pygpt_net.launcher import Launcher
@@ -22,6 +22,7 @@ from pygpt_net.plugin.cmd_files import Plugin as CmdFilesPlugin
 from pygpt_net.plugin.cmd_history import Plugin as CtxHistoryPlugin
 from pygpt_net.plugin.cmd_mouse_control import Plugin as CmdMousePlugin
 from pygpt_net.plugin.cmd_serial import Plugin as CmdSerialPlugin
+from pygpt_net.plugin.cmd_system import Plugin as CmdSystemPlugin
 from pygpt_net.plugin.cmd_web import Plugin as CmdWebPlugin
 from pygpt_net.plugin.crontab import Plugin as CrontabPlugin
 from pygpt_net.plugin.extra_prompt import Plugin as ExtraPromptPlugin
@@ -41,8 +42,10 @@ from pygpt_net.provider.agents.react import ReactAgent
 # LLM wrapper providers (langchain, llama-index, embeddings)
 from pygpt_net.provider.llms.anthropic import AnthropicLLM
 from pygpt_net.provider.llms.azure_openai import AzureOpenAILLM
-from pygpt_net.provider.llms.hugging_face import HuggingFaceLLM
 from pygpt_net.provider.llms.google import GoogleLLM
+from pygpt_net.provider.llms.hugging_face import HuggingFaceLLM
+from pygpt_net.provider.llms.hugging_face_api import HuggingFaceApiLLM
+from pygpt_net.provider.llms.local import LocalLLM
 from pygpt_net.provider.llms.ollama import OllamaLLM
 from pygpt_net.provider.llms.openai import OpenAILLM
 
@@ -308,6 +311,7 @@ def run(**kwargs):
     launcher.add_plugin(CmdWebPlugin())
     launcher.add_plugin(CmdFilesPlugin())
     launcher.add_plugin(CmdCodeInterpreterPlugin())
+    launcher.add_plugin(CmdSystemPlugin())
     launcher.add_plugin(CmdCustomCommandPlugin())
     launcher.add_plugin(CmdApiPlugin())
     launcher.add_plugin(CmdSerialPlugin())
@@ -328,8 +332,10 @@ def run(**kwargs):
     launcher.add_llm(OpenAILLM())
     launcher.add_llm(AzureOpenAILLM())
     launcher.add_llm(AnthropicLLM())
-    launcher.add_llm(HuggingFaceLLM())
     launcher.add_llm(GoogleLLM())
+    launcher.add_llm(HuggingFaceLLM())
+    launcher.add_llm(HuggingFaceApiLLM())
+    launcher.add_llm(LocalLLM())
     launcher.add_llm(OllamaLLM())
 
     # register custom langchain and llama-index LLMs
