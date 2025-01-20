@@ -51,3 +51,6 @@ The integration of the **VIC-20**, **C64**, and **C128** within the Monkey Head 
 
 ### #Monkey-Head-Project
 
+
+
+Written or edited by an A.I. & pending Human-Counterpart approval. 

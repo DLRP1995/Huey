@@ -38,3 +38,6 @@ Huey’s modular hardware design, efficient cooling system, robust power infrast
 
 Huey is more than just a robot; it is a testament to the relentless pursuit of innovation, blending state-of-the-art technology with an open-source ethos, ready to adapt and excel in the ever-evolving landscape of robotics and artificial intelligence.
 
+
+
+Written or edited by an A.I. & pending Human-Counterpart approval. 
