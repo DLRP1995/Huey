@@ -1,0 +1,5 @@
+# requirements.txt
+numpy==1.21.0
+pandas==1.3.0
+requests==2.25.1
+# Add other dependencies here
