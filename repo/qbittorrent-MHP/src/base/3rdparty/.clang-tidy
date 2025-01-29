@@ -1,2 +1,0 @@
-# We don't care about fixing 3rd-party code, so we disable all checks here.
-Checks: -*
