@@ -1,0 +1,295 @@
+```json
+{
+  "releases": [
+    {
+      "version": "2.4.57",
+      "date": "2025-01-19",
+      "changes": [
+        "Logging fix."
+      ]
+    },
+    {
+      "version": "2.4.56",
+      "date": "2025-01-19",
+      "changes": [
+        "Improved tab switching and focus change.",
+        "Improved global keyboard shortcuts handling."
+      ]
+    },
+    {
+      "version": "2.4.55",
+      "date": "2025-01-18",
+      "changes": [
+        "Added a new option in settings: Audio -> Recording timeout.",
+        "Added a new option in settings: Audio -> Enable timeout in continuous mode."
+      ]
+    },
+    {
+      "version": "2.4.54",
+      "date": "2025-01-18",
+      "changes": [
+        "Audio output switched from PyGame to PyAudio. It may be necessary to manually connect Alsa in Snap version with: \"sudo snap connect pygpt:alsa\".",
+        "Added audio output volume progress bar."
+      ]
+    },
+    {
+      "version": "2.4.53",
+      "date": "2025-01-17",
+      "changes": [
+        "Fix: issue #89"
+      ]
+    },
+    {
+      "version": "2.4.52",
+      "date": "2025-01-17",
+      "changes": [
+        "Improved audio input button visibility toggle.",
+        "Fix: check for required arguments - issue #88.",
+        "UI Fixes."
+      ]
+    },
+    {
+      "version": "2.4.51",
+      "date": "2025-01-17",
+      "changes": [
+        "Added a \"Continuous recording\" mode under Audio Input in the Notepad tab, allowing for recording long voice notes and real-time auto-transcription. (beta)",
+        "A new option has been added in Settings -> Audio -> Continuous recording auto-transcribe interval."
+      ]
+    },
+    {
+      "version": "2.4.50",
+      "date": "2025-01-16",
+      "changes": [
+        "Refactored audio input core.",
+        "Added audio input volume progress bar."
+      ]
+    },
+    {
+      "version": "2.4.49",
+      "date": "2025-01-16",
+      "changes": [
+        "Fix: stream render in Assistants mode.",
+        "Fix: items remove in context regen/edit."
+      ]
+    },
+    {
+      "version": "2.4.48",
+      "date": "2025-01-16",
+      "changes": [
+        "Fix: parsing lists in data loaders configuration.",
+        "Fix: crash on Windows on PySide6 v6.6.0.",
+        "Added Gemini embeddings to LlamaIndex settings.",
+        "LlamaIndex upgraded to 0.12.11.",
+        "Security updates."
+      ]
+    },
+    {
+      "version": "2.4.47",
+      "date": "2025-01-14",
+      "changes": [
+        "Added support for Python 3.12.",
+        "Added a new model to Chat with Files: gemini-2.0-flash-exp.",
+        "PySide6 upgraded to 6.6.0."
+      ]
+    },
+    {
+      "version": "2.4.46",
+      "date": "2024-12-16",
+      "changes": [
+        "Added a new tab in Settings: \"API Keys\", where the API keys configuration for Google and Anthropic models has been relocated.",
+        "Introduced a new mode in \"Chat with Files\": \"Retrieve Only\", which allows for retrieving raw documents from the index.",
+        "Fixed a bug related to tool calls in the Gemini provider when using Chat with Files mode."
+      ]
+    },
+    {
+      "version": "2.4.45",
+      "date": "2024-12-16",
+      "changes": [
+        "Enhanced web data loaders UI."
+      ]
+    },
+    {
+      "version": "2.4.44",
+      "date": "2024-12-16",
+      "changes": [
+        "Enhanced web data loaders.",
+        "Web loaders have been added to attachments, allowing external web content to be attached to context via the \"+Web\" button in the Attachments tab.",
+        "Improved handling of attachments in groups and added an attachment icon when a group contains attachments."
+      ]
+    },
+    {
+      "version": "2.4.43",
+      "date": "2024-12-15",
+      "changes": [
+        "Fix: Bug on attachment upload.",
+        "Added: Attachments uploaded in groups are now available for all contexts in the group (beta)."
+      ]
+    },
+    {
+      "version": "2.4.42",
+      "date": "2024-12-15",
+      "changes": [
+        "Added Mailer plugin, which allows sending and retrieving emails from the server, and reading them. It currently supports only SMTP.",
+        "Added 'web_request' command to the Web Search plugin, enabling GET/POST/PUT and other connections to any address and API endpoint. It also supports sending POST data, files, headers, cookies, and more.",
+        "Improved audio output.",
+        "Enhanced visibility of the Video menu.",
+        "Other fixes."
+      ]
+    },
+    {
+      "version": "2.4.41",
+      "date": "2024-12-14",
+      "changes": [
+        "Improved switching between columns on a split screen.",
+        "Added visual identification of the active column."
+      ]
+    },
+    {
+      "version": "2.4.40",
+      "date": "2024-12-13",
+      "changes": [
+        "Enhanced Split Screen mode, now promoted from beta to stable.",
+        "Python Code Interpreter tool added to the Tabs.",
+        "HTML/JS Canvas tool added to the Tabs.",
+        "Added attachment icon to the context list if context has attachments.",
+        "Improved audio playback.",
+        "Improved web search.",
+        "Added a thumbnail image to web search results.",
+        "Added new commands to web search: \"extract_images\" and \"extract_links\".",
+        "Added the option \"Use raw content (without summarization)\" to the web search plugin, which provides a more detailed result to the main model.",
+        "Extended the default maximum result characters to 50,000 in the web search plugin."
+      ]
+    },
+    {
+      "version": "2.4.39",
+      "date": "2024-12-09",
+      "changes": [
+        "Added \"Split Screen\" mode (accessible via the switch in the bottom-right corner of the screen), which allows you to work in two windows simultaneously. It is currently experimental (beta). Future updates will include Code Interpreter and Canvas running in tabs.",
+        "Fixed: Language switch."
+      ]
+    },
+    {
+      "version": "2.4.38",
+      "date": "2024-12-08",
+      "changes": [
+        "Added the ability to select a style for chat display between: Blocks, ChatGPT-like, and ChatGPT-like Wide. New option in the menu: Config -> Theme -> Style...",
+        "Added configuration options for audio input in Settings -> Audio -> Audio Input Device, Channels, and Sampling rate."
+      ]
+    },
+    {
+      "version": "2.4.37",
+      "date": "2024-11-30",
+      "changes": [
+        "The Query only mode in Uploaded tab has been renamed to RAG.",
+        "New options have been added under Settings -> Files and Attachments:",
+        "Use history in RAG query: When enabled, the content of the entire conversation will be used when preparing a query if the mode is set to RAG or Summary.",
+        "RAG limit: This option is applicable only if 'Use history in RAG query' is enabled. It specifies the limit on how many recent entries in the conversation will be used when generating a query for RAG. A value of 0 indicates no limit.",
+        "Cache: dynamic parts of the system prompt (from plugins) have been moved to the very end of the prompt stack to enable the use of prompt cache mechanisms in OpenAI."
+      ]
+    },
+    {
+      "version": "2.4.36",
+      "date": "2024-11-28",
+      "changes": [
+        "Added a new command-line argument: --workdir=\"/path/to/workdir\" to explicitly set the current working directory.",
+        "Fix: start image generation in Image mode."
+      ]
+    },
+    {
+      "version": "2.4.35",
+      "date": "2024-11-28",
+      "changes": [
+        "Docker removed from dependencies in Snap version #82",
+        "Refactored documentation.",
+        "Fix: toggles real-time update hook.",
+        "Fix: missing edit icons.",
+        "Added tokens from attachments to counters if mode == Full context."
+      ]
+    },
+    {
+      "version": "2.4.34",
+      "date": "2024-11-26",
+      "changes": [
+        "Added a new mode: `Chat with Audio`, with built-in multimodal support for audio input/output. Currently in `beta`, the execution of commands and tools in this mode is temporarily unavailable.",
+        "Added new models: `gpt-4o-audio-preview`, `gpt-4o-2024-11-20`, `chatgpt-4o-latest`.",
+        "Force disabled integration with the native system menu."
+      ]
+    },
+    {
+      "version": "2.4.33",
+      "date": "2024-11-26",
+      "changes": [
+        "Improved CSS and rendering of file and image lists.",
+        "Added displaying of used attachments in the chat window."
+      ]
+    },
+    {
+      "version": "2.4.32",
+      "date": "2024-11-26",
+      "changes": [
+        "The \"Add URL\" option added to the \"Attachments\" tab allows users to include content from a given website as additional context. Currently, it only supports standard web pages and video transcription for YouTube links. More \"web\" options will be added in the future.",
+        "Added UTF-8 as default in attachments content text read/write."
+      ]
+    },
+    {
+      "version": "2.4.31",
+      "date": "2024-11-25",
+      "changes": [
+        "Added an option checkbox `Auto-index on upload` in the `Attachments` tab:",
+        "Tip: To use the `Query only` mode, the file must be indexed in the vector database. This occurs automatically at the time of upload if the `Auto-index on upload` option in the `Attachments` tab is enabled. When uploading large files, such indexing might take a while - therefore, if you are using the `Full context` option, which does not use the index, you can disable the `Auto-index` option to speed up the upload of the attachment. In this case, it will only be indexed when the `Query only` option is called for the first time, and until then, attachment will be available in the form of `Full context` and `Summary`.",
+        "Added context menu options in `Uploaded attachments` tab: `Open`, `Open Source directory` and `Open Storage directory`."
+      ]
+    },
+    {
+      "version": "2.4.30",
+      "date": "2024-11-25",
+      "changes": [
+        "Added instruction to model about mapped data directory in both legacy and IPython code interepreter.",
+        "Updated locales for plugins."
+      ]
+    },
+    {
+      "version": "2.4.29",
+      "date": "2024-11-25",
+      "changes": [
+        "Added a local IPython interpreter - you can now choose between local and sandbox (Docker) in the plugin settings.",
+        "Added the ability to configure mapped volumes and ports for Docker containers in the plugin settings.",
+        "Optimized and speed-up the Llama-index plugin (inline).",
+        "Checkboxes replaced with Toggle buttons.",
+        "Improved settings dialogs.",
+        "Slight modification of the layout.",
+        "Fix: Dockerfile formatting in Code Interpreter config.",
+        "Fix: experts inline plugin execution."
+      ]
+    },
+    {
+      "version": "2.4.28",
+      "date": "2024-11-24",
+      "changes": [
+        "Fix: issue #78"
+      ]
+    },
+    {
+      "version": "2.4.27",
+      "date": "2024-11-24",
+      "changes": [
+        "Profile switch fix."
+      ]
+    },
+    {
+      "version": "2.4.26",
+      "date": "2024-11-24",
+      "changes": [
+        "Fix: issue #77"
+      ]
+    },
+    {
+      "version": "2.4.25",
+      "date": "2024-11-24",
+      "changes": [
+        "Added new plugin: System (OS), with optional sandbox support.",
+        "Execution of system commands moved to the System plugin.",
+        "Improved sandbox/Docker management.",
+        "Enhanced plugin settings.",
+        "Commands renamed to Tools, simplified layout.",
+        "Fix
