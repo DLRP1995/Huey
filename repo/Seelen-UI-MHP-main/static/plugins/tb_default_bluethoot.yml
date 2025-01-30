@@ -1,0 +1,8 @@
+id: "@default/bluetooth"
+icon: "TbBluetooth"
+target: "@seelen/fancy-toolbar"
+plugin:
+  type: device
+  template: icon.TbBluetoothConnected
+  onClick: open -> "ms-settings:connecteddevices"
+  tooltip: t("placeholder.bluetooth_devices")
