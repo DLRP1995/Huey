@@ -1,11 +1,11 @@
 version: "3.8"
 
 services:
-  dev-env:
+  monkey-head-project:
     container_name: Monkey-Head-Project
     build: .
     volumes:
-      - .:/workspace
+      - C:\Users\GenCore\Desktop\Huey:/workspace  # Mounts your repo inside Docker
     working_dir: /workspace
     tty: true
     stdin_open: true
