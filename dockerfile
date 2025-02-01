@@ -1,32 +1,35 @@
-# Use Debian Bookworm as the base image (Supports Python 3.11 natively)
+# Use Debian Bookworm as the base image (supports Python 3.11 natively)
 FROM debian:bookworm
 
-# Set environment variables
-ENV DEBIAN_FRONTEND=noninteractive
-ENV VIRTUAL_ENV=/workspace/venv
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+# Set environment variables for non-interactive installs and virtual environment path
+ENV DEBIAN_FRONTEND=noninteractive \
+    VIRTUAL_ENV=/workspace/venv \
+    PATH="/workspace/venv/bin:$PATH"
 
-# Update package lists and install required system dependencies
-RUN apt update && \
-    apt install -y --no-install-recommends \
-    git curl nano vim sudo build-essential \
-    wget lsb-release ca-certificates gnupg apt-transport-https \
-    python3.11 python3.11-venv python3.11-dev python3-pip && \
-    apt clean && rm -rf /var/lib/apt/lists/*
+# Install system dependencies with error handling (using set -eux) and clean up
+RUN set -eux && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        git curl nano vim sudo build-essential \
+        wget lsb-release ca-certificates gnupg apt-transport-https \
+        python3.11 python3.11-venv python3.11-dev python3-pip && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Ensure Python 3.11 is the default
 RUN ln -sf /usr/bin/python3.11 /usr/bin/python3 && \
     ln -sf /usr/bin/pip3 /usr/bin/pip
 
-# Set up working directory
+# Set the working directory
 WORKDIR /workspace
 
-# Create virtual environment before copying files
-RUN python3 -m venv /workspace/venv && \
+# Create the virtual environment and upgrade pip
+RUN set -eux && \
+    python3 -m venv /workspace/venv && \
     /workspace/venv/bin/pip install --upgrade pip
 
-# Install required Python packages (excluding macOS-only ones)
+# Install required Python packages into the virtual environment
 RUN /workspace/venv/bin/pip install --no-cache-dir \
+    pygpt-net \
     aiohttp==3.11.11 \
     anyio==4.8.0 \
     beautifulsoup4==4.12.3 \
@@ -63,11 +66,11 @@ RUN /workspace/venv/bin/pip install --no-cache-dir \
     uvicorn==0.23.2 \
     websockets==11.0.3
 
-# Verify all dependencies are installed
+# Verify all dependencies are installed correctly
 RUN /workspace/venv/bin/pip check
 
-# Secure permissions (Apply after everything is installed)
+# Secure file permissions for the workspace
 RUN chmod -R u+rwX,g+rX,o+rX /workspace
 
-# Default shell
+# Default command to launch a shell
 CMD ["/bin/bash"]

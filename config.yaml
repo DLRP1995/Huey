@@ -1,5 +1,3 @@
-# config.yaml
-
 logging:
   level: DEBUG
   file: 'huey.log'
@@ -10,3 +8,14 @@ database:
   user: 'username'
   password: 'password'
   database: 'huey_db'
+
+system:
+  os: 'debian-bookworm'
+  python_version: '3.11'
+  virtual_env: '/workspace/venv'
+  dependencies:
+    - pygpt-net
+    - docker
+    - kubernetes
+    - fastapi
+    - redis

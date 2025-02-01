@@ -1,11 +1,22 @@
 version: "3.8"
 
 services:
-  monkey-head-project:
+  dev-env:
     container_name: Monkey-Head-Project
-    build: .
+    build:
+      context: .
+      args:
+        PYTHON_VERSION: "3.11"
+        DEBIAN_VERSION: "bookworm"
     volumes:
-      - C:\Users\GenCore\Desktop\Huey:/workspace  # Mounts your repo inside Docker
+      - .:/workspace
     working_dir: /workspace
+    environment:
+      # Optional: Add any runtime environment variables here
+      - VIRTUAL_ENV=/workspace/venv
+      - PATH=/workspace/venv/bin:$PATH
+    ports:
+      - "8000:8000"  # Example port mapping if a web service is exposed
+    restart: unless-stopped  # Optional: Helps with resiliency on failures or reboots
     tty: true
     stdin_open: true
