@@ -6,13 +6,15 @@ ENV DEBIAN_FRONTEND=noninteractive \
     VIRTUAL_ENV=/workspace/venv \
     PATH="/workspace/venv/bin:$PATH"
 
-# Install system dependencies with error handling (using set -eux) and clean up
+# Install system dependencies with error handling (using set -eux) and clean up.
+# Added portaudio19-dev to satisfy PyAudio build requirements.
 RUN set -eux && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         git curl nano vim sudo build-essential \
         wget lsb-release ca-certificates gnupg apt-transport-https \
-        python3.11 python3.11-venv python3.11-dev python3-pip && \
+        python3.11 python3.11-venv python3.11-dev python3-pip \
+        portaudio19-dev && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Ensure Python 3.11 is the default
@@ -66,11 +68,11 @@ RUN /workspace/venv/bin/pip install --no-cache-dir \
     uvicorn==0.23.2 \
     websockets==11.0.3
 
-# Verify all dependencies are installed correctly
+# Verify that all dependencies are installed correctly
 RUN /workspace/venv/bin/pip check
 
 # Secure file permissions for the workspace
 RUN chmod -R u+rwX,g+rX,o+rX /workspace
 
-# Default command to launch a shell
+# Default command to launch an interactive shell
 CMD ["/bin/bash"]
