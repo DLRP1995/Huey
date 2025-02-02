@@ -1,20 +1,29 @@
 # Use Debian Bookworm as the base image (supports Python 3.11 natively)
 FROM debian:bookworm
 
-# Set environment variables for non-interactive installs and virtual environment path
+# Set environment variables:
+# - DEBIAN_FRONTEND suppresses interactive prompts.
+# - VIRTUAL_ENV defines where the Python virtual environment will live.
+# - PATH ensures the venv's binaries are found first.
 ENV DEBIAN_FRONTEND=noninteractive \
     VIRTUAL_ENV=/workspace/venv \
     PATH="/workspace/venv/bin:$PATH"
 
-# Install system dependencies with error handling (using set -eux) and clean up.
-# Added portaudio19-dev to satisfy PyAudio build requirements.
+# Install system dependencies:
+# - build-essential: Provides GCC and other build tools (required by PyAudio).
+# - libglib2.0-0: Provides the libglib-2.0.so.0 needed by PySide6.
+# - portaudio19-dev: (If you require PyAudio support.)
+# - Python 3.11 and related packages.
 RUN set -eux && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        git curl nano vim sudo build-essential \
-        wget lsb-release ca-certificates gnupg apt-transport-https \
-        python3.11 python3.11-venv python3.11-dev python3-pip \
-        portaudio19-dev && \
+        build-essential \
+        libglib2.0-0 \
+        portaudio19-dev \
+        python3.11 \
+        python3.11-venv \
+        python3.11-dev \
+        python3-pip && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Ensure Python 3.11 is the default
@@ -29,9 +38,14 @@ RUN set -eux && \
     python3 -m venv /workspace/venv && \
     /workspace/venv/bin/pip install --upgrade pip
 
-# Install required Python packages into the virtual environment
+# Auto-activate the virtual environment by appending the source command to .bashrc
+RUN echo "source /workspace/venv/bin/activate" >> /root/.bashrc
+
+# (Optional) Install your Python packages.
+# You can include packages such as pygpt-net, pyaudio, etc.
 RUN /workspace/venv/bin/pip install --no-cache-dir \
     pygpt-net \
+    pyaudio \
     aiohttp==3.11.11 \
     anyio==4.8.0 \
     beautifulsoup4==4.12.3 \
@@ -74,5 +88,5 @@ RUN /workspace/venv/bin/pip check
 # Secure file permissions for the workspace
 RUN chmod -R u+rwX,g+rX,o+rX /workspace
 
-# Default command to launch an interactive shell
+# Default command: launch an interactive shell (with the venv auto-activated via .bashrc)
 CMD ["/bin/bash"]
